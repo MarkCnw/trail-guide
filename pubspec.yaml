@@ -34,6 +34,7 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
@@ -58,8 +59,8 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
+  assets:
+    - assets/logo/
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -87,3 +88,12 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+# สำคัญ: คำว่า flutter_launcher_icons: ต้องชิดซ้ายสุด ห้ามมีย่อหน้า
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo/bg4.png" # ใช้สำหรับ iOS และ Android เก่า (เป็นไฟล์สี่เหลี่ยมสี Deep Teal/เบจ เต็มแผ่น)
+
+  # *** สำหรับ Android รุ่นใหม่ (Adaptive Icons) ***
+  adaptive_icon_background: "#EEE9D9"  # <--- ใส่ Hex Code ของสี Deep Teal ที่เราเลือกไว้
+  adaptive_icon_foreground: "assets/logo/logo14.png" # <--- ไฟล์ภูเขาที่พื้นหลังโปร่งใส
