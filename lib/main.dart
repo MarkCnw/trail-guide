@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+// Import ไฟล์ที่เราสร้างไว้ (เช็ค Path ให้ถูกนะ)
+import 'features/tracking/data/datasources/location_data_source.dart';
+import 'features/tracking/data/repositories/location_repository_impl.dart';
+import 'features/tracking/presentation/provider/location_provider.dart';
+import 'features/tracking/presentation/pages/tracking_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -9,60 +16,31 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
+    // 1. สร้าง DataSource (ตัวดึง GPS)
+    final dataSource = LocationDataSourceImpl();
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+    // 2. สร้าง Repository (ตัวจัดการข้อมูล) โดยยัด DataSource เข้าไป
+    final repository = LocationRepositoryImpl(dataSource: dataSource);
 
-
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+    return MultiProvider(
+      providers: [
+        // 3. สร้าง Provider (ตัวคุม State) โดยยัด Repository เข้าไป
+        ChangeNotifierProvider(
+          create: (_) => LocationProvider(repository: repository),
         ),
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'TrailGuide',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.green,
+          ), // ธีมสีเขียวเดินป่า
+          useMaterial3: true,
+        ),
+        // 4. เปิดมาให้เจอหน้า TrackingPage ของเราเลย
+        home: const TrackingPage(),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), 
     );
   }
 }
