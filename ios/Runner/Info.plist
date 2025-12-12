@@ -2,6 +2,22 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>ขอใช้เครือข่ายเพื่อค้นหาเพื่อนร่วมทีมเดินป่า</string>
+    <key>NSBonjourServices</key>
+    <array>
+    <string>_mqtt._tcp</string>
+    </array>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>แอปต้องใช้ Bluetooth เพื่อค้นหาและเชื่อมต่อกับเพื่อนเดินป่าในระยะใกล้</string>
+    <key>NSBluetoothPeripheralUsageDescription</key>
+    <string>แอปต้องใช้ Bluetooth เพื่อแลกเปลี่ยนข้อมูลตำแหน่งกับเพื่อน</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>แอปต้องใช้เครือข่ายภายในเพื่อรับส่งข้อมูลตำแหน่งกับเพื่อนในทีม</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_mp-connection._tcp</string>
+    </array>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>แอปต้องการตำแหน่งของคุณเพื่อช่วยนำทางและระบุพิกัดเดินป่า</string>
     <key>NSLocationAlwaysUsageDescription</key>
