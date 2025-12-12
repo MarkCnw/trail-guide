@@ -11,12 +11,14 @@ android {
     ndkVersion = "27.0.12077973"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        // 👇 แก้ตรงนี้: ใส่เครื่องหมาย =
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        // 👇 แก้ตรงนี้: ใช้ " " แทน ' '
+        jvmTarget = "1.8"
     }
 
     defaultConfig {

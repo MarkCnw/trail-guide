@@ -1,6 +1,3 @@
-
-
-
 // สืบทอดจาก UserLocation (Domain) เพื่อให้ส่งข้อมูลข้าม Layer ได้
 import 'package:geolocator/geolocator.dart';
 import 'package:trail_guide/features/tracking/domain/entities/user_location_entity.dart';
