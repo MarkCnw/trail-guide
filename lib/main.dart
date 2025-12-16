@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:trail_guide/features/onboarding/presentation/pages/profile_setup_page.dart';
 import 'package:trail_guide/features/p2p/presentation/pages/radar_page.dart';
 import 'injection_container.dart' as di; // ตั้งชื่อเล่นว่า di จะได้ไม่งง
 
@@ -26,7 +27,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const Scaffold(
-        body: RadarPage()
+        body: ProfileSetupPage()
       ),
     );
   }
