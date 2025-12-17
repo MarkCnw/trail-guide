@@ -7,39 +7,43 @@ import 'features/p2p/data/repositories/p2p_repository_impl.dart';
 import 'features/p2p/domain/repositories/p2p_repository.dart';
 import 'features/p2p/domain/usecases/scan_for_peers.dart';
 import 'features/p2p/domain/usecases/watch_peers.dart';
-import 'features/p2p/presentation/bloc/p2p_bloc.dart';
 
-// Features - Onboarding (ใหม่)
+// Features - Onboarding
 import 'features/onboarding/data/models/user_profile_model.dart';
 import 'features/onboarding/data/datasources/onboarding_local_data_source.dart';
 import 'features/onboarding/presentation/cubit/onboarding_cubit.dart';
 
-
 final sl = GetIt.instance;
+
 Future<void> init() async {
+  // 🧹 1. ล้างค่าเก่าทิ้งก่อน (แก้ปัญหา Hot Restart)
+  await sl.reset();
+
   // ! ===========================
   // ! External (ฐานข้อมูล & Hardware)
   // ! ===========================
-  
-  // 1. เปิดใช้งาน Isar Database
+
+  // เปิดใช้งาน Isar Database
   final dir = await getApplicationDocumentsDirectory();
-  final isar = await Isar.open(
-    [UserProfileModelSchema], 
-    directory: dir.path,
-  );
+  final isar = await Isar.open([
+    UserProfileModelSchema,
+  ], directory: dir.path);
   sl.registerLazySingleton(() => isar);
 
   // ! ===========================
   // ! Feature: Onboarding (Profile Setup)
   // ! ===========================
-  
+
   // Data Source
   sl.registerLazySingleton<OnboardingLocalDataSource>(
-    () => OnboardingLocalDataSourceImpl(sl()), // ✅ แก้ไขตรงนี้ครับ (ลบ isar: ทิ้ง)
+    () => OnboardingLocalDataSourceImpl(sl()), // ส่ง Isar เข้าไปตรงๆ
   );
 
-  // Cubit (Logic)
-  sl.registerFactory(
+  // ❌ ลบบรรทัด registerFactory อันนี้ทิ้งครับ (เพราะมันซ้ำกับข้างล่าง)
+  // sl.registerFactory(() => OnboardingCubit(dataSource: sl()));
+
+  // ✅ ใช้ registerLazySingleton ตัวเดียวพอ (Global State)
+  sl.registerLazySingleton<OnboardingCubit>(
     () => OnboardingCubit(dataSource: sl()),
   );
 
@@ -48,16 +52,10 @@ Future<void> init() async {
   // ! ===========================
 
   // Repository
-  sl.registerLazySingleton<P2PRepository>(
-    () => P2PRepositoryImpl(),
-  );
+  // (ถ้ายังไม่มีเครื่องจริงให้ใช้ MockP2PRepository() แทนได้นะ)
+  sl.registerLazySingleton<P2PRepository>(() => P2PRepositoryImpl());
 
   // Use Cases
   sl.registerLazySingleton(() => ScanForPeers(sl()));
   sl.registerLazySingleton(() => WatchPeers(sl()));
-
-  // Bloc
-  sl.registerFactory(
-    () => P2PBloc(scanForPeers: sl(), watchPeers: sl()),
-  );
 }

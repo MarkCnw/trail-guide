@@ -1,9 +1,10 @@
 import 'package:isar/isar.dart';
-import '../models/user_profile_model.dart';
+import '../models/user_profile_model.dart'; //implement local data source for user profile management
 
 abstract class OnboardingLocalDataSource {
   Future<void> saveUserProfile(UserProfileModel profile);
   Future<UserProfileModel?> getUserProfile();
+  Future<bool> hasUser();
 }
 
 class OnboardingLocalDataSourceImpl implements OnboardingLocalDataSource {
@@ -23,5 +24,11 @@ class OnboardingLocalDataSourceImpl implements OnboardingLocalDataSource {
   @override
   Future<UserProfileModel?> getUserProfile() async {
     return await isar.userProfileModels.where().findFirst();
+  }
+
+  @override
+  Future<bool> hasUser() async {
+    final count = await isar.userProfileModels.count();
+    return count > 0;
   }
 }
