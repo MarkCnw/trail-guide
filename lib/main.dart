@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:trail_guide/features/onboarding/presentation/pages/profile_setup_page.dart';
-import 'package:trail_guide/features/p2p/presentation/pages/radar_page.dart';
-import 'injection_container.dart' as di; // ตั้งชื่อเล่นว่า di จะได้ไม่งง
+import 'package:flutter_bloc/flutter_bloc.dart'; // 👈 อย่าลืม import
+import 'package:trail_guide/core/config/routes/app_router.dart';
+import 'features/onboarding/presentation/cubit/onboarding_cubit.dart';
+import 'injection_container.dart' as di;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // เรียกใช้ฟังก์ชัน init ที่เราเพิ่งเขียน
   await di.init();
-  
   runApp(const MyApp());
 }
 
@@ -17,17 +15,22 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'TrailGuide',
-      theme: ThemeData(
-        primarySwatch: Colors.green,
-        // ปรับธีมให้ดูเป็นแอปเดินป่าหน่อย
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        useMaterial3: true,
-      ),
-      home: const Scaffold(
-        body: ProfileSetupPage()
+    // 🟢 ครอบทั้งแอปด้วย MultiBlocProvider
+    return MultiBlocProvider(
+      providers: [
+        // สร้าง Cubit และโหลดข้อมูล User ทิ้งไว้เลยตั้งแต่เข้าแอป 🚀
+        BlocProvider<OnboardingCubit>(
+          create: (_) => di.sl<OnboardingCubit>()..loadUserProfile(),
+        ),
+      ],
+      child: MaterialApp.router( // ใช้ router ตามที่คุณวางโครงสร้างไว้
+        debugShowCheckedModeBanner: false,
+        title: 'TrailGuide',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2E7D32)),
+          useMaterial3: true,
+        ),
+        routerConfig: AppRouter.router, // 👈 ใช้ Router ตัวเก่งของคุณ
       ),
     );
   }

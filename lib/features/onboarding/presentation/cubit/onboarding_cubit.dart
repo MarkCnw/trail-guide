@@ -4,9 +4,17 @@ import '../../data/models/user_profile_model.dart';
 
 // State ง่ายๆ
 abstract class OnboardingState {}
+
 class OnboardingInitial extends OnboardingState {}
+
 class OnboardingLoading extends OnboardingState {}
+
 class OnboardingSuccess extends OnboardingState {}
+
+class OnboardingLoaded extends OnboardingState {
+  final UserProfileModel profile;
+  OnboardingLoaded(this.profile);
+}
 
 class OnboardingFailure extends OnboardingState {
   final String message;
@@ -19,23 +27,34 @@ class OnboardingCubit extends Cubit<OnboardingState> {
   OnboardingCubit({required this.dataSource}) : super(OnboardingInitial());
 
   Future<void> completeSetup(String nickname, String? imagePath) async {
-    if (nickname.trim().isEmpty) {
-      emit(OnboardingFailure("กรุณากรอกชื่อเล่น"));
-      return;
-    }
-
     emit(OnboardingLoading());
 
     try {
       final profile = UserProfileModel()
         ..nickname = nickname
-        ..imagePath = imagePath; // ถ้าเป็น null คือใช้รูป default
+        ..imagePath = imagePath;
 
       await dataSource.saveUserProfile(profile);
 
+      // 1. บอกว่าสำเร็จ (เพื่อให้ UI โชว์ SnackBar หรือเปลี่ยนหน้า)
       emit(OnboardingSuccess());
+
+      // ✨ 2. โหลดข้อมูลใหม่ทันที! (เพื่อให้ HomePage อัปเดตชื่อ/รูปใหม่)
+      await loadUserProfile();
     } catch (e) {
-      emit(OnboardingFailure("บันทึกข้อมูลไม่สำเร็จ: $e"));
+      emit(OnboardingFailure("บันทึกไม่สำเร็จ: $e"));
+    }
+  }
+
+  // ใน class Cubit เพิ่มฟังก์ชันนี้
+  Future<void> loadUserProfile() async {
+    try {
+      final profile = await dataSource.getUserProfile();
+      if (profile != null) {
+        emit(OnboardingLoaded(profile)); // ส่งข้อมูลไปให้ UI
+      }
+    } catch (e) {
+      // Handle error (เงียบไว้ก่อนก็ได้ครับ)
     }
   }
 }

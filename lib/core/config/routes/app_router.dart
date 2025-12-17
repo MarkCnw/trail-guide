@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:trail_guide/features/history/presentation/pages/history_page.dart';
+import 'package:trail_guide/features/onboarding/data/datasources/onboarding_local_data_source.dart';
 import 'package:trail_guide/features/p2p/presentation/pages/home_page.dart';
 import 'package:trail_guide/features/p2p/presentation/pages/lobby_page.dart';
 import 'package:trail_guide/features/p2p/presentation/pages/scan_page.dart';
+import 'package:trail_guide/features/profile/presentation/pages/profile_page.dart';
+import 'package:trail_guide/features/settings/presentation/pages/settings_page.dart';
+import 'package:trail_guide/injection_container.dart';
 
 // Import หน้าจอที่มีอยู่จริง
 import '../../../features/onboarding/presentation/pages/profile_setup_page.dart';
@@ -14,11 +19,27 @@ import '../../../features/p2p/presentation/widgets/scaffold_with_navbar.dart'; /
 class AppRouter {
   // Key สำหรับ Navigator หลัก (เต็มจอ)
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
-  // Key สำหรับ Shell (มีเมนู) ไม่ต้องประกาศแยกก็ได้ แต่ถ้าจะ Advanced ก็ใช้ได้
+
 
   static final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/profile_setup', // เริ่มต้นเช็คชื่อก่อนเสมอ
+    initialLocation: '/home', 
+    redirect: (context, state) async {
+      final isLoggedIn = await sl<OnboardingLocalDataSource>().hasUser();
+      final isLoggingIn = state.uri.toString() == '/profile_setup';
+
+      if (!isLoggedIn && !isLoggingIn) {
+        // ถ้ายังไม่มี User และไม่ได้อยู่หน้า Setup -> ดีดไปหน้า Setup
+        return '/profile_setup';
+      }
+
+      if (isLoggedIn && isLoggingIn) {
+        // ถ้ามี User แล้ว แต่อยากเข้าหน้า Setup -> ดีดไปหน้า Home
+        return '/home';
+      }
+
+      return null; // ปล่อยผ่าน
+    },
     routes: [
       // ====================================================
       // 🟢 GROUP 1: Outside Shell (หน้าเต็มจอ ไม่มีเมนูล่าง)
@@ -43,6 +64,11 @@ class AppRouter {
         path: '/lobby',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const LobbyPage(),
+      ),
+
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsPage(),
       ),
 
       // ====================================================
@@ -70,6 +96,25 @@ class AppRouter {
               GoRoute(
                 path: '/radar',
                 builder: (context, state) => const RadarPage(),
+              ),
+            ],
+          ),
+
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/history',
+                builder: (context, state) => const HistoryPage(),
+              ),
+            ],
+          ),
+
+          // Branch 4: Profile
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/profile',
+                builder: (context, state) => const ProfilePage(),
               ),
             ],
           ),
