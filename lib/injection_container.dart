@@ -7,7 +7,7 @@ import 'features/p2p/data/repositories/p2p_repository_impl.dart';
 import 'features/p2p/domain/repositories/p2p_repository.dart';
 import 'features/p2p/domain/usecases/scan_for_peers.dart';
 import 'features/p2p/domain/usecases/watch_peers.dart';
-import 'features/p2p/presentation/bloc/p2p_bloc.dart'; // 👈 อย่าลืม import อันนี้
+import 'features/p2p/presentation/bloc/p2p_bloc.dart';
 
 // Features - Onboarding
 import 'features/onboarding/data/models/user_profile_model.dart';
@@ -21,14 +21,14 @@ Future<void> init() async {
   await sl.reset();
 
   // ! ===========================
-  // ! External (ฐานข้อมูล & Hardware)
+  // !  External (ฐานข้อมูล & Hardware)
   // ! ===========================
 
   // เปิดใช้งาน Isar Database
   final dir = await getApplicationDocumentsDirectory();
   final isar = await Isar.open([
     UserProfileModelSchema,
-  ], directory: dir.path);
+  ], directory: dir. path);
   sl.registerLazySingleton(() => isar);
 
   // ! ===========================
@@ -56,13 +56,13 @@ Future<void> init() async {
   sl.registerLazySingleton(() => ScanForPeers(sl()));
   sl.registerLazySingleton(() => WatchPeers(sl()));
 
-  // ✨ Bloc (เพิ่มส่วนนี้) ✨
-  // ใช้ registerFactory เพราะ Bloc ควรถูกสร้างใหม่ทุกครั้งที่เรียกใช้ (เช่น เข้าออกหน้าใหม่)
-  sl.registerFactory(
+  // ✅ แก้ไข: ใช้ registerLazySingleton แทน registerFactory
+  // เพื่อให้ P2P connection state คงอยู่แม้เปลี่ยนหน้า
+  sl.registerLazySingleton<P2PBloc>(
     () => P2PBloc(
       scanForPeers: sl(),
       watchPeers: sl(),
-      repository: sl(), // 👈 ส่ง repository เข้าไปตามที่แก้ใน Bloc
+      repository: sl(),
     ),
   );
 }

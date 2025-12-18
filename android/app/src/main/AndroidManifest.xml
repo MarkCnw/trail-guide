@@ -1,35 +1,47 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- ==================== CAMERA & FLASHLIGHT ==================== -->
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.FLASHLIGHT" />
+    <uses-permission android:name="android.permission. FLASHLIGHT" />
 
+    <!-- ==================== LOCATION (จำเป็นสำหรับ Nearby Connections) ==================== -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Background Location:  ใช้เฉพาะถ้าต้องการ Track ตอนแอปอยู่ Background -->
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
-    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- ==================== NETWORK & WIFI ==================== -->
+    <uses-permission android:name="android. permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android. permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission. CHANGE_WIFI_STATE" />
     
-    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" 
-                     android:usesPermissionFlags="neverForLocation" />
+    <!-- ✅ แก้ไข: เอา neverForLocation ออก เพื่อให้ Nearby Connections ทำงานได้ -->
+    <uses-permission android:name="android. permission.NEARBY_WIFI_DEVICES" />
 
-    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <!-- ==================== BLUETOOTH ==================== -->
+    <!-- สำหรับ Android 11 (API 30) และต่ำกว่า -->
+    <uses-permission android:name="android.permission.BLUETOOTH" 
+                     android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" 
+                     android: maxSdkVersion="30" />
 
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" 
-                     android:usesPermissionFlags="neverForLocation" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <!-- สำหรับ Android 12+ (API 31+) -->
+    <!-- ✅ แก้ไข: เอา neverForLocation ออก เพื่อให้หา Device ได้ -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android: name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
+    <!-- ==================== APPLICATION ==================== -->
     <application
-        android:label="trail_guide"
+        android:label="Trail Guide"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
+        
         <activity
-            android:name=".MainActivity"
+            android:name=". MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""
@@ -37,15 +49,17 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
+            
             <meta-data
-              android:name="io.flutter.embedding.android.NormalTheme"
-              android:resource="@style/NormalTheme"
-              />
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+                
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
@@ -54,7 +68,7 @@
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
+            <data android: mimeType="text/plain"/>
         </intent>
     </queries>
 </manifest>
