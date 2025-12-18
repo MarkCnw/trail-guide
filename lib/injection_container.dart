@@ -7,6 +7,7 @@ import 'features/p2p/data/repositories/p2p_repository_impl.dart';
 import 'features/p2p/domain/repositories/p2p_repository.dart';
 import 'features/p2p/domain/usecases/scan_for_peers.dart';
 import 'features/p2p/domain/usecases/watch_peers.dart';
+import 'features/p2p/presentation/bloc/p2p_bloc.dart'; // 👈 อย่าลืม import อันนี้
 
 // Features - Onboarding
 import 'features/onboarding/data/models/user_profile_model.dart';
@@ -36,26 +37,32 @@ Future<void> init() async {
 
   // Data Source
   sl.registerLazySingleton<OnboardingLocalDataSource>(
-    () => OnboardingLocalDataSourceImpl(sl()), // ส่ง Isar เข้าไปตรงๆ
+    () => OnboardingLocalDataSourceImpl(sl()),
   );
 
-  // ❌ ลบบรรทัด registerFactory อันนี้ทิ้งครับ (เพราะมันซ้ำกับข้างล่าง)
-  // sl.registerFactory(() => OnboardingCubit(dataSource: sl()));
-
-  // ✅ ใช้ registerLazySingleton ตัวเดียวพอ (Global State)
+  // Cubit (Global State)
   sl.registerLazySingleton<OnboardingCubit>(
     () => OnboardingCubit(dataSource: sl()),
   );
 
   // ! ===========================
-  // ! Feature: P2P (Radar)
+  // ! Feature: P2P (Radar & Host)
   // ! ===========================
 
   // Repository
-  // (ถ้ายังไม่มีเครื่องจริงให้ใช้ MockP2PRepository() แทนได้นะ)
   sl.registerLazySingleton<P2PRepository>(() => P2PRepositoryImpl());
 
   // Use Cases
   sl.registerLazySingleton(() => ScanForPeers(sl()));
   sl.registerLazySingleton(() => WatchPeers(sl()));
+
+  // ✨ Bloc (เพิ่มส่วนนี้) ✨
+  // ใช้ registerFactory เพราะ Bloc ควรถูกสร้างใหม่ทุกครั้งที่เรียกใช้ (เช่น เข้าออกหน้าใหม่)
+  sl.registerFactory(
+    () => P2PBloc(
+      scanForPeers: sl(),
+      watchPeers: sl(),
+      repository: sl(), // 👈 ส่ง repository เข้าไปตามที่แก้ใน Bloc
+    ),
+  );
 }

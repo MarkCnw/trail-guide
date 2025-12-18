@@ -11,6 +11,12 @@ class ScanForPeers implements UseCase<void, NoParams> {
 
   @override
   Future<Either<Failure, void>> call(NoParams params) async {
-    return await repository.startDiscovery();
+    // 1. ตั้งชื่อที่จะไปโชว์บนเครื่อง Host (เดี๋ยวค่อยแก้ให้ดึงจาก Profile จริงๆ ทีหลัง)
+    const String userName = "TrailGuide Member"; 
+    
+    // 2. รูปแบบการเชื่อมต่อ (ต้องใช้แบบเดียวกับ Host)
+    const String strategy = "star"; 
+
+    return await repository.startDiscovery(userName, strategy);
   }
 }
