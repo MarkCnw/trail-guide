@@ -1,9 +1,8 @@
-
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../onboarding/presentation/cubit/onboarding_cubit.dart';
 import '../bloc/p2p_bloc.dart';
@@ -17,96 +16,50 @@ class LobbyPage extends StatefulWidget {
 
 class _LobbyPageState extends State<LobbyPage> {
   String _hostData = "TrailGuide-Host";
+  String _roomPin = ""; // 🆕 PIN Code 6 หลัก
+  bool _showPin = true; // สลับโหมดแสดง QR หรือ PIN
 
   @override
   void initState() {
     super.initState();
 
-    // ดึงชื่อ User จาก OnboardingCubit
+    // สร้าง PIN Code 6 หลัก
+    _roomPin = _generatePin();
+
+    // ดึงชื่อ User
     final onboardingState = context.read<OnboardingCubit>().state;
     if (onboardingState is OnboardingLoaded) {
-      _hostData = onboardingState.profile.nickname ?? "TrailGuide-Host";
+      _hostData = "${onboardingState.profile.nickname}#$_roomPin";
+    } else {
+      _hostData = "TrailGuide-Host#$_roomPin";
     }
 
-    // เริ่มปล่อยสัญญาณ (Advertising) ทันทีที่เข้าหน้านี้
+    // เริ่ม Advertising
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<P2PBloc>().add(StartAdvertisingEvent(_hostData));
     });
   }
 
+  // 🆕 สร้าง PIN 6 หลัก
+  String _generatePin() {
+    final random = Random();
+    return List.generate(6, (_) => random.nextInt(10)).join();
+  }
+
+  // 🆕 Copy PIN
+  void _copyPin() {
+    Clipboard.setData(ClipboardData(text: _roomPin));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("📋 PIN copied!"),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     super.dispose();
-  }
-
-  // แสดง Dialog ไปตั้งค่าแอป
-  void _showSettingsDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange),
-            SizedBox(width: 8),
-            Text("ต้องการสิทธิ์"),
-          ],
-        ),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("ยกเลิก"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              openAppSettings();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text("ไปตั้งค่า"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // แสดง Dialog เปิด GPS
-  void _showGpsDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.location_off, color: Colors.red),
-            SizedBox(width: 8),
-            Text("เปิด GPS"),
-          ],
-        ),
-        content: const Text("กรุณาเปิด Location Service (GPS) เพื่อใช้งานฟีเจอร์นี้"),
-        actions: [
-          TextButton(
-            onPressed:  () => Navigator.pop(context),
-            child: const Text("ยกเลิก"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Geolocator.openLocationSettings();
-            },
-            style:  ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors. white,
-            ),
-            child: const Text("เปิด GPS"),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -115,89 +68,56 @@ class _LobbyPageState extends State<LobbyPage> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         leading: IconButton(
-          icon:  const Icon(Icons.close_rounded, color: Colors.black),
+          icon: const Icon(Icons.close_rounded, color: Colors.black),
           onPressed: () {
-            // หยุด Advertising ก่อนออก
             context.read<P2PBloc>().add(StopAdvertisingEvent());
             context.pop();
           },
         ),
         title: const Text(
           "Team Lobby",
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
         ),
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          // 🆕 ปุ่มสลับโหมด QR/PIN
+          IconButton(
+            icon: Icon(_showPin ? Icons.qr_code_2 : Icons.pin),
+            onPressed: () => setState(() => _showPin = !_showPin),
+            tooltip: _showPin ? "Show QR Code" : "Show PIN",
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Column(
         children: [
           const SizedBox(height: 20),
 
-          // ----------------- 1. ส่วน QR Code -----------------
-          Text(
-            "Scan to Join",
-            style: TextStyle(color: Colors.grey[600], fontSize: 16),
-          ),
-          const SizedBox(height: 16),
-
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow:  [
-                  BoxShadow(
-                    color: Colors. black.withOpacity(0.05),
-                    blurRadius:  20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: QrImageView(
-                data: _hostData,
-                version: QrVersions.auto,
-                size: 200.0,
-                foregroundColor: const Color(0xFF2E7D32),
-              ),
-            ),
-          ),
-
-          const SizedBox(height:  16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child:  Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.copy_rounded, size: 16, color: Colors.grey),
-                const SizedBox(width:  8),
-                Text(
-                  _hostData,
-                  style:  const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
+          // ----------------- 1. แสดง QR หรือ PIN -----------------
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: _showPin ? _buildPinSection() : _buildQrSection(),
           ),
 
           const SizedBox(height: 32),
 
-          // ----------------- 2. ส่วนรายชื่อเพื่อน (Member List) -----------------
+          // ----------------- 2. รายชื่อสมาชิก -----------------
           Expanded(
             child: Container(
               width: double.infinity,
               decoration: const BoxDecoration(
-                color:  Color(0xFFF6F8F6),
+                color: Color(0xFFF6F8F6),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(32),
-                  topRight:  Radius.circular(32),
+                  topRight: Radius.circular(32),
                 ),
               ),
-              child:  Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
@@ -212,17 +132,19 @@ class _LobbyPageState extends State<LobbyPage> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        // Badge บอกจำนวนคน
                         BlocBuilder<P2PBloc, P2PState>(
                           builder: (context, state) {
                             int count = 0;
-                            if (state is P2PUpdated) count = state.peers.length;
+                            if (state is P2PUpdated)
+                              count = state.peers.length;
                             return Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
-                                color: Colors.green. withOpacity(0.1),
-                                borderRadius: BorderRadius. circular(12),
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 "$count Joined",
@@ -239,92 +161,38 @@ class _LobbyPageState extends State<LobbyPage> {
                     ),
                   ),
 
-                  // List รายชื่อเพื่อน
+                  // List สมาชิก
                   Expanded(
-                    child: BlocConsumer<P2PBloc, P2PState>(
-                      listener: (context, state) {
-                        // แสดง Dialog ตาม Error
-                        if (state is P2PError) {
-                          if (state.message. contains("GPS") ||
-                              state.message.contains("Location Service")) {
-                            _showGpsDialog();
-                          } else if (state.message.contains("ถาวร") ||
-                              state.message. contains("การตั้งค่า")) {
-                            _showSettingsDialog(state.message);
-                          }
-                        }
-                      },
+                    child: BlocBuilder<P2PBloc, P2PState>(
                       builder: (context, state) {
-                        // แสดง Loading
                         if (state is P2PLoading) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment:  MainAxisAlignment.center,
-                              children: [
-                                const CircularProgressIndicator(
-                                  color: Colors.green,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  "กำลังเปิดรับสมาชิก...",
-                                  style: TextStyle(color: Colors.grey[600]),
-                                ),
-                              ],
+                          return const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.green,
                             ),
                           );
                         }
 
-                        // แสดง Error
                         if (state is P2PError) {
                           return Center(
-                            child:  Padding(
+                            child: Padding(
                               padding: const EdgeInsets.all(24),
                               child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.error_outline,
-                                      size: 48, color: Colors.red[300]),
+                                  Icon(
+                                    Icons.error_outline,
+                                    size: 48,
+                                    color: Colors.red[300],
+                                  ),
                                   const SizedBox(height: 12),
                                   Text(
                                     state.message,
-                                    style: TextStyle(color: Colors.red[400]),
-                                    textAlign:  TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 20),
-                                  // ปุ่มไปตั้งค่า
-                                  if (state.message.contains("ถาวร") ||
-                                      state. message.contains("การตั้งค่า"))
-                                    ElevatedButton.icon(
-                                      onPressed: () => openAppSettings(),
-                                      icon: const Icon(Icons.settings),
-                                      label: const Text("ไปตั้งค่าแอป"),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:  Colors.orange,
-                                        foregroundColor: Colors.white,
-                                      ),
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.red[400],
                                     ),
-                                  // ปุ่มเปิด GPS
-                                  if (state.message.contains("GPS") ||
-                                      state. message.contains("Location Service"))
-                                    ElevatedButton. icon(
-                                      onPressed: () =>
-                                          Geolocator.openLocationSettings(),
-                                      icon: const Icon(Icons.location_on),
-                                      label: const Text("เปิด GPS"),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:  Colors.blue,
-                                        foregroundColor: Colors.white,
-                                      ),
-                                    ),
-                                  const SizedBox(height: 12),
-                                  // ปุ่มลองใหม่
-                                  TextButton. icon(
-                                    onPressed: () {
-                                      context.read<P2PBloc>().add(
-                                          StartAdvertisingEvent(_hostData));
-                                    },
-                                    icon: const Icon(Icons.refresh),
-                                    label: const Text("ลองใหม่"),
                                   ),
                                 ],
                               ),
@@ -332,10 +200,12 @@ class _LobbyPageState extends State<LobbyPage> {
                           );
                         }
 
-                        // แสดงรายชื่อเพื่อน
-                        if (state is P2PUpdated && state.peers.isNotEmpty) {
+                        if (state is P2PUpdated &&
+                            state.peers.isNotEmpty) {
                           return ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                            ),
                             itemCount: state.peers.length,
                             itemBuilder: (context, index) {
                               final peer = state.peers[index];
@@ -350,47 +220,49 @@ class _LobbyPageState extends State<LobbyPage> {
                                     backgroundColor: Colors.blue[50],
                                     child: Text(
                                       peer.name.isNotEmpty
-                                          ? peer.name[0]. toUpperCase()
-                                          : "? ",
-                                      style: TextStyle(color: Colors.blue[700]),
+                                          ? peer.name[0].toUpperCase()
+                                          : "?",
+                                      style: TextStyle(
+                                        color: Colors.blue[700],
+                                      ),
                                     ),
                                   ),
                                   title: Text(
                                     peer.name,
                                     style: const TextStyle(
-                                        fontWeight: FontWeight.bold),
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                   subtitle: Text(
                                     "Connected",
                                     style: TextStyle(
-                                        color: Colors.green[600], fontSize: 12),
+                                      color: Colors.green[600],
+                                      fontSize: 12,
+                                    ),
                                   ),
-                                  trailing: const Icon(Icons.check_circle,
-                                      color: Colors. green),
+                                  trailing: const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                  ),
                                 ),
                               );
                             },
                           );
                         }
 
-                        // กรณีไม่มีเพื่อน (Waiting)
                         return Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.person_add_alt_1_rounded,
-                                  size: 48, color:  Colors.grey[300]),
+                              Icon(
+                                Icons.person_add_alt_1_rounded,
+                                size: 48,
+                                color: Colors.grey[300],
+                              ),
                               const SizedBox(height: 8),
                               Text(
                                 "Waiting for members...",
                                 style: TextStyle(color: Colors.grey[400]),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                "ให้เพื่อนกด Join Team แล้วสแกนหาทีมของคุณ",
-                                style: TextStyle(
-                                    color: Colors.grey[400], fontSize: 12),
-                                textAlign: TextAlign.center,
                               ),
                             ],
                           ),
@@ -408,27 +280,28 @@ class _LobbyPageState extends State<LobbyPage> {
       // ----------------- 3. ปุ่ม Start Trek -----------------
       bottomNavigationBar: Container(
         color: const Color(0xFFF6F8F6),
-        padding: const EdgeInsets. all(20),
+        padding: const EdgeInsets.all(20),
         child: SafeArea(
           child: ElevatedButton(
-            onPressed: () {
-              context.push('/tracking');
-            },
-            style:  ElevatedButton.styleFrom(
+            onPressed: () => context.push('/tracking'),
+            style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2E7D32),
-              foregroundColor:  Colors.white,
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
-                borderRadius:  BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(16),
               ),
               elevation: 4,
             ),
-            child:  const Row(
+            child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   "Start Adventure",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 SizedBox(width: 8),
                 Icon(Icons.arrow_forward_rounded),
@@ -437,6 +310,123 @@ class _LobbyPageState extends State<LobbyPage> {
           ),
         ),
       ),
+    );
+  }
+
+  // 🆕 ส่วน QR Code
+  Widget _buildQrSection() {
+    return Column(
+      key: const ValueKey("qr"),
+      children: [
+        Text(
+          "Scan QR to Join",
+          style: TextStyle(color: Colors.grey[600], fontSize: 16),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: QrImageView(
+            data: _hostData,
+            version: QrVersions.auto,
+            size: 200.0,
+            foregroundColor: const Color(0xFF2E7D32),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 🆕 ส่วน PIN Code
+  Widget _buildPinSection() {
+    return Column(
+      key: const ValueKey("pin"),
+      children: [
+        Text(
+          "Room PIN Code",
+          style: TextStyle(color: Colors.grey[600], fontSize: 16),
+        ),
+        const SizedBox(height: 16),
+
+        // PIN Display
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 40,
+            vertical: 20,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // PIN ตัวเลขใหญ่ๆ
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: _roomPin.split('').map((digit) {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2E7D32).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      digit,
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2E7D32),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+
+              const SizedBox(height: 16),
+
+              // ปุ่ม Copy
+              TextButton.icon(
+                onPressed: _copyPin,
+                icon: const Icon(Icons.copy_rounded, size: 18),
+                label: const Text("Copy PIN"),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF2E7D32),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // คำแนะนำ
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Text(
+            "เพื่อนสามารถพิมพ์ PIN นี้ในหน้า Join Team",
+            style: TextStyle(color: Colors.grey[500], fontSize: 12),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ],
     );
   }
 }
