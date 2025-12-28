@@ -18,10 +18,13 @@ class _LobbyPageState extends State<LobbyPage> {
   String _hostData = "TrailGuide-Host";
   String _roomPin = ""; // 🆕 PIN Code 6 หลัก
   bool _showPin = true; // สลับโหมดแสดง QR หรือ PIN
+  late P2PBloc _p2pBloc;
 
   @override
   void initState() {
     super.initState();
+
+    _p2pBloc = context.read<P2PBloc>();
 
     // สร้าง PIN Code 6 หลัก
     _roomPin = _generatePin();
@@ -36,7 +39,8 @@ class _LobbyPageState extends State<LobbyPage> {
 
     // เริ่ม Advertising
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<P2PBloc>().add(StartAdvertisingEvent(_hostData));
+      // context.read<P2PBloc>().add(StartAdvertisingEvent(_hostData));
+      _p2pBloc.add(StartAdvertisingEvent(_hostData));
     });
   }
 
@@ -59,6 +63,7 @@ class _LobbyPageState extends State<LobbyPage> {
 
   @override
   void dispose() {
+    _p2pBloc.add(StopAdvertisingEvent());
     super.dispose();
   }
 

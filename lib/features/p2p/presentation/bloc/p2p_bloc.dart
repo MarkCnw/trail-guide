@@ -5,7 +5,6 @@ import 'package:trail_guide/features/p2p/domain/entities/peer_entity.dart';
 import 'package:trail_guide/features/p2p/domain/repositories/p2p_repository.dart';
 import 'package:trail_guide/features/p2p/domain/usecases/scan_for_peers.dart';
 
-
 import '../../domain/usecases/watch_peers.dart';
 
 part 'p2p_event.dart';
@@ -40,13 +39,10 @@ class P2PBloc extends Bloc<P2PEvent, P2PState> {
     Emitter<P2PState> emit,
   ) async {
     emit(P2PLoading());
-    
+
     // ใช้ชื่อจาก Event แทน hardcode
-    final result = await repository.startDiscovery(
-      event.userName,
-      "star",
-    );
-    
+    final result = await repository.startDiscovery(event.userName, "star");
+
     result.fold(
       (failure) => emit(P2PError(failure.message)),
       (_) {}, // สำเร็จ รอ stream
@@ -59,21 +55,18 @@ class P2PBloc extends Bloc<P2PEvent, P2PState> {
     Emitter<P2PState> emit,
   ) async {
     emit(P2PLoading());
-    
+
     // ใช้ชื่อจาก Event แทน hardcode
     final result = await repository.startAdvertising(
       event.hostName,
       "star",
     );
 
-    result.fold(
-      (failure) => emit(P2PError(failure.message)),
-      (_) {
-        // สำเร็จ รอคนมา connect (Stream จะทำงาน)
-        // Emit state ว่าพร้อมรับคนแล้ว
-        emit(const P2PUpdated([]));
-      },
-    );
+    result.fold((failure) => emit(P2PError(failure.message)), (_) {
+      // สำเร็จ รอคนมา connect (Stream จะทำงาน)
+      // Emit state ว่าพร้อมรับคนแล้ว
+      emit(const P2PUpdated([]));
+    });
   }
 
   // ✅ Logic: หยุด Discovery
@@ -105,27 +98,35 @@ class P2PBloc extends Bloc<P2PEvent, P2PState> {
     ConnectToPeerEvent event,
     Emitter<P2PState> emit,
   ) async {
+    emit(P2PLoading());
     final result = await repository.connectToPeer(event.peerId);
 
     result.fold(
       (failure) {
         print("Connection Failed: ${failure.message}");
-        // แสดง error แต่ไม่ทับ state เดิม
+        // ส่ง Error กลับไปที่ UI เพื่อโชว์ SnackBar สีแดง
+        emit(P2PError(failure.message));
+
+        // *สำคัญ* หลังจาก Error อาจจะต้อง emit list ล่าสุดกลับมา
+        // หรือปล่อยให้ Stream subscription ทำงานอัปเดต state เอง
       },
       (_) {
-        print("Requested Connection to ${event.peerId}");
-        // ถ้าสำเร็จ สถานะจะเปลี่ยนผ่าน Stream
+        print("Connection Success/Requested to ${event.peerId}");
+
+        // 🔥 แก้ตรงนี้: Emit State ว่าเชื่อมต่อสำเร็จแล้ว!
+        // UI (BlocListener) จะได้รับสิ่งนี้แล้วสั่งเด้งหน้า
+        emit(P2PConnected(event.peerId));
       },
     );
   }
 
   // ✅ Logic:  อัปเดตรายชื่อ Peers
   void _onPeersUpdated(OnPeersUpdatedEvent event, Emitter<P2PState> emit) {
-    emit(P2PUpdated(event. peers));
+    emit(P2PUpdated(event.peers));
   }
 
   void _subscribeToPeers() {
-    _peersSubscription?. cancel();
+    _peersSubscription?.cancel();
     _peersSubscription = watchPeers().listen(
       (peers) => add(OnPeersUpdatedEvent(peers)),
     );
