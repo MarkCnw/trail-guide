@@ -31,15 +31,17 @@ class P2PRepositoryImpl implements P2PRepository {
   Stream<List<PeerEntity>> get peersStream => _peerStreamController.stream;
 
   // ✅ ฟังก์ชันตรวจสอบ Permission (ปรับปรุงแล้ว)
+  // ในไฟล์ p2p_repository_impl.dart
+
   Future<Either<Failure, bool>> _checkPermissions() async {
     try {
-      // 1. ตรวจสอบ Location Service
+      // 1. เช็คว่าเปิด GPS หรือยัง (สำคัญมากสำหรับทุกเครื่อง)
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        return const Left(P2PFailure("กรุณาเปิด Location Service (GPS)"));
+        return const Left(P2PFailure("กรุณาเปิด GPS (Location Service)"));
       }
 
-      // 2. ขอ Permission ทีละตัว
+      // 2. ขอสิทธิ์ทั้งหมด
       Map<Permission, PermissionStatus> statuses = await [
         Permission.location,
         Permission.bluetoothScan,
@@ -48,24 +50,21 @@ class P2PRepositoryImpl implements P2PRepository {
         Permission.nearbyWifiDevices,
       ].request();
 
-      // ตรวจสอบว่าผ่านหมดหรือไม่
-      for (var entry in statuses.entries) {
-        if (entry.value.isPermanentlyDenied) {
-          return Left(
-            P2PFailure(
-              "สิทธิ์ ${entry.key} ถูกปฏิเสธถาวร กรุณาเปิดในการตั้งค่า",
-            ),
-          );
-        }
-        // Location เป็นตัวบังคับ ต้อง granted
-        if (entry.key == Permission.location && !entry.value.isGranted) {
-          return const Left(P2PFailure("กรุณาอนุญาตสิทธิ์ Location"));
-        }
+      // 3. 🚨 ตรวจสอบเฉพาะ "Location" เท่านั้นที่ต้องบังคับ (สำหรับเครื่องเก่า)
+      if (statuses[Permission.location] != PermissionStatus.granted) {
+        return const Left(
+          P2PFailure(
+            "ต้องอนุญาตสิทธิ์ตำแหน่ง (Location) เพื่อค้นหาเพื่อน",
+          ),
+        );
       }
+
+      // สำหรับสิทธิ์อื่นๆ (Bluetooth/Nearby) ถ้าเป็นเครื่องเก่ามันอาจจะ Denied
+      // หรือหาไม่เจอ ก็ปล่อยผ่านไปได้เลย เพราะ Android จัดการให้ผ่าน Location แล้ว
 
       return const Right(true);
     } catch (e) {
-      return Left(P2PFailure("เกิดข้อผิดพลาด: $e"));
+      return Left(P2PFailure("Permission Error: $e"));
     }
   }
 
@@ -130,7 +129,7 @@ class P2PRepositoryImpl implements P2PRepository {
     }
   }
 
-  // ✅ ปรับปรุง startAdvertising
+  // ✅ ปรับปรุง startAdvertising 
   @override
   Future<Either<Failure, void>> startAdvertising(
     String userName,
@@ -232,6 +231,11 @@ class P2PRepositoryImpl implements P2PRepository {
       _isDiscovering = false;
       _retryTimer?.cancel();
       await nearby.stopDiscovery();
+
+      // 🔥 เพิ่มบรรทัดนี้: ล้างรายการที่เคยเจอทิ้ง เพื่อให้สแกนเจอใหม่ได้ในรอบหน้า
+      _discoveredPeers.clear();
+      _updateStream(); // อัปเดตให้ UI รู้ว่า List ว่างแล้ว
+
       return const Right(null);
     } catch (e) {
       return Left(P2PFailure(e.toString()));
@@ -243,6 +247,11 @@ class P2PRepositoryImpl implements P2PRepository {
     try {
       _isAdvertising = false;
       await nearby.stopAdvertising();
+
+      // 🔥 เพิ่มบรรทัดนี้: ล้างรายการทิ้งด้วย (กันเหนียว)
+      _discoveredPeers.clear();
+      _updateStream();
+
       return const Right(null);
     } catch (e) {
       return Left(P2PFailure(e.toString()));
