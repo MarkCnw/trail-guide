@@ -5,7 +5,7 @@ import 'package:trail_guide/features/p2p/domain/entities/peer_entity.dart';
 import 'package:trail_guide/features/p2p/domain/repositories/p2p_repository.dart';
 import 'package:trail_guide/features/p2p/domain/usecases/scan_for_peers.dart';
 
-import '../../domain/usecases/watch_peers.dart';
+import '../../../domain/usecases/watch_peers.dart';
 
 part 'p2p_event.dart';
 part 'p2p_state.dart';

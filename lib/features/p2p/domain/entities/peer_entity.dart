@@ -1,24 +1,45 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
-
 import 'package:equatable/equatable.dart';
 
 class PeerEntity extends Equatable {
-  final String id;          // Device ID หรือ Mac Address
-  final String name;        // ชื่อเพื่อน
-  final int rssi;           // ความแรงสัญญาณ (ใช้คำนวณระยะห่างคร่าวๆ)
-  final bool isLost;        // สถานะ: หลุดระยะหรือไม่?
+  final String id;
+  final String name;
+  final int rssi;
+  final bool isLost;
+  final String? imageBase64;
+  final bool isHost;
 
-  
   const PeerEntity({
     required this.id,
     required this.name,
-    required this.rssi,
-    required this.isLost,
+    this.rssi = 0,
+    this.isLost = false,
+    this.imageBase64,
+    this.isHost = false,
   });
 
+  PeerEntity copyWith({
+    String? id,
+    String? name,
+    int? rssi,
+    bool? isLost,
+    String? imageBase64,
+    bool? isHost,
+  }) {
+    return PeerEntity(
+      id: id ??  this.id,
+      name: name ?? this.name,
+      rssi: rssi ?? this. rssi,
+      isLost: isLost ?? this.isLost,
+      imageBase64: imageBase64 ?? this. imageBase64,
+      isHost: isHost ?? this.isHost,
+    );
+  }
 
-
-  // ใช้ Equatable เพื่อให้เปรียบเทียบ Object ได้ง่าย (ตรวจสอบว่าเพื่อนคนเดิมหรือไม่)
   @override
-  List<Object?> get props => [id, name, rssi, isLost];
+  List<Object?> get props => [id, name, rssi, isLost, imageBase64, isHost];
+
+  @override
+  String toString() {
+    return 'PeerEntity(id: $id, name: $name, isHost: $isHost)';
+  }
 }
