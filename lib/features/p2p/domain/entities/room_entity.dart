@@ -55,7 +55,7 @@ class RoomEntity extends Equatable {
     required this.createdAt,
   });
 
-  /// จำนวน Members ปัจจุบ���น (ไม่รวม Host)
+  /// จำนวน Members ปัจจุบัน (ไม่รวม Host)
   int get memberCount => members.length;
 
   /// จำนวนคนทั้งหมดในห้อง (รวม Host)

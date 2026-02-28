@@ -28,8 +28,6 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   /// Device ID ของตัวเอง
   String _deviceId = '';
 
-  
-
   /// Member Name
   String _memberName = '';
 
@@ -142,7 +140,8 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
       }
     } else if (isMember && _hostPeerId != null) {
       final lastPing = _lastPingTime[_hostPeerId];
-      if (lastPing != null && now.difference(lastPing!) > timeout) {
+      // 🔧 FIX:  ลบ !  ออก เพราะเช็ค != null แล้ว
+      if (lastPing != null && now.difference(lastPing) > timeout) {
         add(PeerDisconnectedEvent(_hostPeerId!));
       }
     }
@@ -424,6 +423,10 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   // HOST: Handle Join Request
   // ============================================================
 
+  // ============================================================
+  // HOST: Handle Join Request
+  // ============================================================
+
   Future<void> _handleJoinRequest(
     String fromPeerId,
     RoomMessage message,
@@ -434,7 +437,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
     final password = message.password;
     final memberName = message.senderName;
     final memberId = message.senderId;
-    final memberImageBase64 = message.imageBase64; // 🆕
+    final memberImageBase64 = message.imageBase64;
 
     // 1. ตรวจสอบ Password
     if (!_currentRoom!.validatePassword(password ?? '')) {
@@ -447,8 +450,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
       return;
     }
 
-    // 2. 🆕 ตรวจสอบจำนวนคน (รวม Host)
-    // maxMembers = 5 หมายถึงรวม Host แล้ว ดังนั้น members ได้สูงสุด 4 คน
+    // 2. ตรวจสอบจำนวนคน (รวม Host)
     if (_connectedMembers.length >= (_currentRoom!.maxMembers - 1)) {
       final rejectMessage = RoomMessage.joinResponseRejected(
         hostId: _deviceId,
@@ -459,23 +461,9 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
       return;
     }
 
-    // 3. เพิ่ม Member ใหม่
-    final alreadyExists = _connectedMembers.any((m) => m.id == fromPeerId);
-    if (!alreadyExists) {
-      final newMember = PeerEntity(
-        id: fromPeerId,
-        name: memberName,
-        rssi: 0,
-        isLost: false,
-        imageBase64: memberImageBase64, // 🆕
-        isHost: false,
-      );
-      _connectedMembers.add(newMember);
-      _lastPingTime[fromPeerId] = DateTime.now();
-    }
-
-    // 4. 🆕 สร้าง members list สำหรับส่งไป Member ใหม่
+    // 3. 🔧 FIX: สร้าง members list ก่อนเพิ่มคนใหม่ (ไม่รวมคนที่เพิ่งเข้ามา)
     final membersList = _connectedMembers
+        .where((m) => m.id != fromPeerId) // 🔧 ไม่รวมคนที่กำลังจะเข้า
         .map(
           (m) => {
             'id': m.id,
@@ -486,29 +474,44 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
         )
         .toList();
 
-    // 5. ส่ง ACCEPTED ไป Member ใหม่ (พร้อม Host info และ members list)
+    // 4. เพิ่ม Member ใหม่
+    final alreadyExists = _connectedMembers.any((m) => m.id == fromPeerId);
+    if (!alreadyExists) {
+      final newMember = PeerEntity(
+        id: fromPeerId,
+        name: memberName,
+        rssi: 0,
+        isLost: false,
+        imageBase64: memberImageBase64,
+        isHost: false,
+      );
+      _connectedMembers.add(newMember);
+      _lastPingTime[fromPeerId] = DateTime.now();
+    }
+
+    // 5. ส่ง ACCEPTED ไป Member ใหม่
     final acceptMessage = RoomMessage.joinResponseAccepted(
       hostId: _deviceId,
       hostName: _currentRoom!.hostName,
       roomId: _currentRoom!.roomId,
       roomPin: _currentRoom!.roomPin,
-      currentMemberCount: _connectedMembers.length + 1, // 🆕 รวม Host
+      currentMemberCount: _connectedMembers.length + 1,
       maxMembers: _currentRoom!.maxMembers,
-      hostImageBase64: _hostImageBase64, // 🆕
+      hostImageBase64: _hostImageBase64,
       roomPassword: _currentRoom!.password,
-      members: membersList, // 🆕
+      members: membersList, // 🔧 ส่ง list ที่ไม่รวมคนใหม่
     );
     await _repository.sendPayload(fromPeerId, acceptMessage.toJson());
 
-    // 6. Broadcast ไป Members คนอื่นๆ
+    // 6.  Broadcast ไป Members คนอื่นๆ
     final joinedNotification = RoomMessage.memberJoined(
       hostId: _deviceId,
       hostName: _currentRoom!.hostName,
       newMemberId: memberId,
       newMemberName: memberName,
-      currentMemberCount: _connectedMembers.length + 1, // 🆕 รวม Host
+      currentMemberCount: _connectedMembers.length + 1,
       maxMembers: _currentRoom!.maxMembers,
-      newMemberImageBase64: memberImageBase64, // 🆕
+      newMemberImageBase64: memberImageBase64,
     );
     await _broadcastToAllMembers(
       joinedNotification,
@@ -520,8 +523,8 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
       RoomCreated(
         room: _currentRoom!,
         connectedMembers: List.from(_connectedMembers),
-        hostName: _hostName, // 🆕
-        hostImageBase64: _hostImageBase64, // 🆕
+        hostName: _hostName,
+        hostImageBase64: _hostImageBase64,
       ),
     );
   }
@@ -622,7 +625,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
         RoomJoined(
           roomId: message.roomId ?? '',
           roomPin: message.payload['roomPin'] as String? ?? '',
-         roomPassword: message.roomPassword ?? '',  // 🆕 เพิ่ม
+          roomPassword: message.roomPassword ?? '', // 🆕 เพิ่ม
           hostPeerId: _hostPeerId ?? '',
           hostName: message.senderName,
           hostImageBase64: message.hostImageBase64,
