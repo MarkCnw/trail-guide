@@ -225,6 +225,8 @@ class RoomFullError extends RoomState {
   List<Object?> get props => [hostName];
 }
 
+
+
 // เอาไปวางไว้ล่างสุดของไฟล์ room_state.dart
 // 🆕 State สำหรับการอัปเดตพิกัดเรียลไทม์ในหน้า Tracking
 class RoomTrackingUpdated extends RoomState {

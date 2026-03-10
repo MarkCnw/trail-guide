@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:trail_guide/features/p2p/presentation/bloc/p2p/p2p_bloc.dart';
 
 import '../../../onboarding/presentation/cubit/onboarding_cubit.dart';
 import '../../domain/entities/peer_entity.dart';
@@ -138,12 +139,15 @@ class _LobbyPageState extends State<LobbyPage> {
   Widget build(BuildContext context) {
     return BlocConsumer<RoomBloc, RoomState>(
       listener: (context, state) {
-        if (state is RoomTripStarted) {
-          context.pushReplacement('/tracking');
+        if (state is RoomCreated) {
+          setState(() {
+            _isCreatingRoom = false;
+            _roomCreated = true;
+          });
         }
         // 🆕 ดักฟังสถานะเริ่มทริป เมื่อได้รับแล้วให้เปลี่ยนหน้าจอไปยัง Tracking
         else if (state is RoomTripStarted) {
-          context.pushReplacement('/tracking');
+          context.go('/radar');
         } else if (state is RoomLeft) {
           context.pop();
         } else if (state is RoomError) {
@@ -176,7 +180,10 @@ class _LobbyPageState extends State<LobbyPage> {
           if (_roomCreated) {
             _showCloseRoomDialog();
           } else {
-            context.pop();
+            // 🛑 หยุดการค้นหาคลื่น P2P ก่อนกลับ
+            context.read<P2PBloc>().add(StopDiscoveryEvent());
+            // 🚀 บังคับกลับไปที่หน้าโฮมเพจตรงๆ เลย
+            context.go('/radar');
           }
         },
       ),

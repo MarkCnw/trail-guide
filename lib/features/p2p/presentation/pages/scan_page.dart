@@ -53,7 +53,15 @@ class _ScanPageState extends State<ScanPage> {
   }
 
   void _startDiscovery() {
-    context.read<P2PBloc>().add(StartDiscoveryEvent(_memberName));
+    // 1. สั่งหยุดของเก่าก่อนเพื่อล้าง Cache คลื่นวิทยุที่ค้างอยู่
+    context.read<P2PBloc>().add(StopDiscoveryEvent());
+    
+    // 2. หน่วงเวลา 0.3 วินาทีให้ฮาร์ดแวร์รีเซ็ต แล้วค่อยสแกนใหม่
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        context.read<P2PBloc>().add(StartDiscoveryEvent(_memberName));
+      }
+    });
   }
 
   @override
@@ -219,7 +227,9 @@ class _ScanPageState extends State<ScanPage> {
   Widget build(BuildContext context) {
     return BlocConsumer<RoomBloc, RoomState>(
       listener: (context, state) {
-        if (state is RoomLeft) {
+        if (state is RoomTripStarted) {
+          context.go('/radar');
+        } else if (state is RoomLeft) {
           _startDiscovery();
         } else if (state is RoomClosedByHost) {
           _showRoomClosedDialog(state.reason);
@@ -278,7 +288,12 @@ class _ScanPageState extends State<ScanPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            // 🛑 หยุดการค้นหาคลื่น P2P ก่อนกลับ
+            context.read<P2PBloc>().add(StopDiscoveryEvent());
+            // 🚀 บังคับกลับไปที่หน้าโฮมเพจตรงๆ เลย
+            context.go('/radar');
+          },
         ),
         title: const Text(
           'Join Room',

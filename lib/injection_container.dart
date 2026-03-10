@@ -62,7 +62,6 @@ Future<void> init() async {
   sl.registerLazySingleton(() => WatchMessages(sl())); // 🆕
   sl.registerLazySingleton(() => BroadcastMessage(sl())); // 🆕
   sl.registerFactory(() => LocationBloc()); // 🆕 เพิ่มบรรทัดนี้
-
   // P2P BLoC
   // 🔥 แก้ไขตรงนี้: เติม parameters ที่ขาดไปให้ครบ
   sl.registerFactory<P2PBloc>(
