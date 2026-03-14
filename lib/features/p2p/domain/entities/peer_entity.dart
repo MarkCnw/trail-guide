@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+
+
 class PeerEntity extends Equatable {
   final String id;
   final String name;
@@ -7,7 +9,7 @@ class PeerEntity extends Equatable {
   final bool isLost;
   final String? imageBase64;
   final bool isHost;
-  final double? latitude; // 🆕 เก็บละติจูด
+  final double? latitude;  // 🆕 เก็บละติจูด
   final double? longitude; // 🆕 เก็บจิจูด
 
   const PeerEntity({
@@ -44,14 +46,5 @@ class PeerEntity extends Equatable {
   }
 
   @override
-  List<Object?> get props => [
-    id,
-    name,
-    rssi,
-    isLost,
-    imageBase64,
-    isHost,
-    latitude,
-    longitude,
-  ];
+  List<Object?> get props => [id, name, rssi, isLost, imageBase64, isHost, latitude, longitude];
 }

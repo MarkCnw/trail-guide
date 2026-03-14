@@ -219,7 +219,9 @@ class _ScanPageState extends State<ScanPage> {
   Widget build(BuildContext context) {
     return BlocConsumer<RoomBloc, RoomState>(
       listener: (context, state) {
-        if (state is RoomLeft) {
+        if (state is RoomTripStarted) {
+          context.go('/radar');
+        } else if (state is RoomLeft) {
           _startDiscovery();
         } else if (state is RoomClosedByHost) {
           _showRoomClosedDialog(state.reason);
@@ -278,7 +280,12 @@ class _ScanPageState extends State<ScanPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            // 🛑 หยุดการค้นหาคลื่น P2P ก่อนกลับ
+            context.read<P2PBloc>().add(StopDiscoveryEvent());
+            // 🚀 บังคับกลับไปที่หน้าโฮมเพจตรงๆ เลย
+            context.go('/radar');
+          },
         ),
         title: const Text(
           'Join Room',

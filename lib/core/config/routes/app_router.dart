@@ -7,13 +7,13 @@ import 'package:trail_guide/features/p2p/presentation/pages/lobby_page.dart';
 import 'package:trail_guide/features/p2p/presentation/pages/scan_page.dart';
 import 'package:trail_guide/features/profile/presentation/pages/profile_page.dart';
 import 'package:trail_guide/features/settings/presentation/pages/settings_page.dart';
-import 'package:trail_guide/features/tracking/presentation/pages/tracking_page.dart';
 import 'package:trail_guide/injection_container.dart';
 
 // Import หน้าจอที่มีอยู่จริง
 import '../../../features/onboarding/presentation/pages/profile_setup_page.dart';
 import '../../../features/p2p/presentation/pages/radar_page.dart';
-import '../../../features/p2p/presentation/widgets/scaffold_with_navbar.dart'; // Import ตัวกรอบที่เราสร้าง
+import '../../../features/p2p/presentation/widgets/scaffold_with_navbar.dart'; 
+
 
 
 
@@ -67,12 +67,7 @@ class AppRouter {
         builder: (context, state) => const LobbyPage(),
       ),
 
-      // 🔥 4. หน้า Tracking / Radar (หน้าเริ่มเดินป่า)
-      GoRoute(
-        path: '/tracking',
-        parentNavigatorKey: _rootNavigatorKey, // ให้เต็มจอ ทับแถบเมนูด้านล่างไปเลย
-        builder: (context, state) => const TrackingPage(),
-      ),
+
 
       GoRoute(
         path: '/settings',

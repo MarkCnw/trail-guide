@@ -392,49 +392,49 @@ class _HomeViewState extends State<_HomeView> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
-                children: [
-                  // 🟢 การ์ด Host (Green Gradient)
-                  Expanded(
-                    child: ActionGridCard(
-                      title: 'Host Team',
-                      subtitle: 'Create Group',
-                      icon: Icons.flag, // หรือใช้ SVG
-                      iconColor: Colors.white, // ไอคอนสีขาว
-                      // ✨ ใส่ Gradient สีเขียว ✨
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFF0F3923), // เขียวเข้มมาก (เขียวป่า)
-                          Color(0xFF1B5E3C), // เขียวเข้มอมสด
-                        ],
-                      ),
-                      onTap: () => context.push('/lobby'),
-                    ),
-                  ),
+                // children: [
+                //   // 🟢 การ์ด Host (Green Gradient)
+                //   Expanded(
+                //     child: ActionGridCard(
+                //       title: 'Host Team',
+                //       subtitle: 'Create Group',
+                //       icon: Icons.flag, // หรือใช้ SVG
+                //       iconColor: Colors.white, // ไอคอนสีขาว
+                //       // ✨ ใส่ Gradient สีเขียว ✨
+                //       gradient: const LinearGradient(
+                //         begin: Alignment.topLeft,
+                //         end: Alignment.bottomRight,
+                //         colors: [
+                //           Color(0xFF0F3923), // เขียวเข้มมาก (เขียวป่า)
+                //           Color(0xFF1B5E3C), // เขียวเข้มอมสด
+                //         ],
+                //       ),
+                //       onTap: () => context.push('/lobby'),
+                //     ),
+                //   ),
         
-                  const SizedBox(width: 16),
+                //   const SizedBox(width: 16),
         
-                  // ⚫ การ์ด Join (Dark Gradient)
-                  Expanded(
-                    child: ActionGridCard(
-                      title: 'Join Team',
-                      subtitle: 'Scan Code',
-                      icon: Icons.qr_code_scanner,
-                      iconColor: Colors.white, // ไอคอนสีขาว
-                      // ✨ ใส่ Gradient สีดำเทา ✨
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFF232323), // ดำเทาเข้ม
-                          Color(0xFF2E2E2E), // เทาเข้ม
-                        ],
-                      ),
-                      onTap: () => context.push('/scan'),
-                    ),
-                  ),
-                ],
+                //   // ⚫ การ์ด Join (Dark Gradient)
+                //   Expanded(
+                //     child: ActionGridCard(
+                //       title: 'Join Team',
+                //       subtitle: 'Scan Code',
+                //       icon: Icons.qr_code_scanner,
+                //       iconColor: Colors.white, // ไอคอนสีขาว
+                //       // ✨ ใส่ Gradient สีดำเทา ✨
+                //       gradient: const LinearGradient(
+                //         begin: Alignment.topLeft,
+                //         end: Alignment.bottomRight,
+                //         colors: [
+                //           Color(0xFF232323), // ดำเทาเข้ม
+                //           Color(0xFF2E2E2E), // เทาเข้ม
+                //         ],
+                //       ),
+                //       onTap: () => context.push('/scan'),
+                //     ),
+                //   ),
+                // ],
               ),
             ),
         
