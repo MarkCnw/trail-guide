@@ -73,6 +73,9 @@ class JoinRoomEvent extends RoomEvent {
 class LeaveRoomEvent extends RoomEvent {
   const LeaveRoomEvent();
 }
+class CheckMemberTimeoutEvent extends RoomEvent {
+  const CheckMemberTimeoutEvent();
+}
 
 // ============================================================
 // INTERNAL EVENTS

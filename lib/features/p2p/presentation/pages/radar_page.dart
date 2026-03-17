@@ -309,74 +309,66 @@ class _RadarPageState extends State<RadarPage>
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.my_location_rounded,
-              color: Colors.greenAccent,
-            ),
-            onPressed: () {
-              // TODO: Re-center
-            },
-          ),
-        ],
+        
       ),
       // 🔥 รวบ BlocBuilder มาไว้ตรงนี้เลย ดึงพิกัดครั้งเดียวใช้ได้ทั้งหน้า!
       body: BlocBuilder<LocationBloc, LocationState>(
         builder: (context, locationState) {
           double? myLat;
           double? myLng;
+          double myHeading = 0.0; // 🆕 1. เพิ่มตัวแปรเก็บทิศที่เราหันหน้า
 
           // ดึงพิกัดของเราออกมา
           if (locationState is LocationTracking) {
             myLat = locationState.position.latitude;
             myLng = locationState.position.longitude;
+            myHeading = locationState.position.heading; // 🆕 ดึงค่า heading มาจาก
           }
 
           return Column(
             children: [
               // 📍 พิกัดตัวเอง
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 8,
-                  horizontal: 16,
-                ),
-                color: Colors.black45,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      myLat != null
-                          ? Icons.gps_fixed
-                          : Icons.gps_not_fixed,
-                      color: myLat != null
-                          ? Colors.greenAccent
-                          : Colors.orangeAccent,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      myLat != null
-                          ? 'My GPS: ${myLat.toStringAsFixed(5)}, ${myLng!.toStringAsFixed(5)}'
-                          : 'Acquiring GPS Signal...',
-                      style: TextStyle(
-                        color: myLat != null
-                            ? Colors.greenAccent
-                            : Colors.orangeAccent,
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              // Container(
+              //   width: double.infinity,
+              //   padding: const EdgeInsets.symmetric(
+              //     vertical: 8,
+              //     horizontal: 16,
+              //   ),
+              //   color: Colors.black45,
+              //   child: Row(
+              //     mainAxisAlignment: MainAxisAlignment.center,
+              //     children: [
+              //       Icon(
+              //         myLat != null
+              //             ? Icons.gps_fixed
+              //             : Icons.gps_not_fixed,
+              //         color: myLat != null
+              //             ? Colors.greenAccent
+              //             : Colors.orangeAccent,
+              //         size: 16,
+              //       ),
+              //       const SizedBox(width: 8),
+              //       Text(
+              //         myLat != null
+              //             ? 'My GPS: ${myLat.toStringAsFixed(5)}, ${myLng!.toStringAsFixed(5)}'
+              //             : 'Acquiring GPS Signal...',
+              //         style: TextStyle(
+              //           color: myLat != null
+              //               ? Colors.greenAccent
+              //               : Colors.orangeAccent,
+              //           fontFamily: 'monospace',
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
 
               // 🧭 เรดาร์
               Expanded(
                 flex: 3,
                 child: Center(
                   // ✅ ส่งพิกัดตัวเองเข้าไปด้วย 3 ตัวแปรครบถ้วน
-                  child: _buildRadarCircle(tripMembers, myLat, myLng),
+                  child: _buildRadarCircle(tripMembers, myLat, myLng, myHeading),
                 ),
               ),
 
@@ -440,6 +432,7 @@ class _RadarPageState extends State<RadarPage>
                               tripMembers[index],
                               myLat,
                               myLng,
+                              myHeading,
                             );
                           },
                         ),
@@ -460,6 +453,7 @@ class _RadarPageState extends State<RadarPage>
     List<PeerEntity> members,
     double? myLat,
     double? myLng,
+    double myHeading, // 🆕 รับค่าเข็มทิศตรงนี้
   ) {
     const double radarSize = 320.0;
     const double centerOffset = radarSize / 2;
@@ -494,8 +488,11 @@ class _RadarPageState extends State<RadarPage>
             member.longitude!,
           );
 
-          // 4. แปลงองศาเข็มทิศ (North=0) เป็นองศาคณิตศาสตร์ (Right=0) และเป็น Radians
-          double mathAngle = (bearing - 90) * (math.pi / 180);
+          // 🆕 3.5 หักลบทิศทางโลก ด้วยทิศทางที่เรากำลังหันหน้าไป
+          double relativeBearing = bearing - myHeading;
+
+          // 4. แปลงองศาเข็มทิศ เป็นองศาคณิตศาสตร์ และแปลงเป็น Radians
+          double mathAngle = (relativeBearing - 90) * (math.pi / 180);
 
           // 5. หาพิกัด X, Y บนหน้าจอ
           double x = centerOffset + (scaledRadius * math.cos(mathAngle));
@@ -518,9 +515,9 @@ class _RadarPageState extends State<RadarPage>
       height: radarSize,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.greenAccent.withOpacity(0.05),
+        color: Colors.greenAccent.withValues(alpha: 0.05),
         border: Border.all(
-          color: Colors.greenAccent.withOpacity(0.3),
+          color: Colors.greenAccent.withValues(alpha: 0.3),
           width: 2,
         ),
       ),
@@ -635,7 +632,13 @@ class _RadarPageState extends State<RadarPage>
   // 🔴 ฟังก์ชันสร้างจุด 1 จุดบนเรดาร์
   Widget _buildRadarDot(PeerEntity member) {
     // กำหนดสี: Host สีเหลืองอำพัน, Member สีเขียวสว่าง
-    final color = member.isHost ? Colors.amberAccent : Colors.greenAccent;
+    final isActive = member.isActive;
+    Color color;
+    if (!isActive) {
+      color = Colors.grey; 
+    } else {
+      color = member.isHost ? Colors.amberAccent : Colors.greenAccent;
+    }
 
     return Tooltip(
       message: member.name, // กดค้างเพื่อดูชื่อได้
@@ -643,11 +646,11 @@ class _RadarPageState extends State<RadarPage>
         width: 24,
         height: 24,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.8),
+         color: color.withValues(alpha :isActive ? 0.8 : 0.5),
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white, width: 2),
           boxShadow: [
-            BoxShadow(color: color, blurRadius: 8, spreadRadius: 1),
+            BoxShadow(color: color, blurRadius:isActive? 8:4, spreadRadius: 1),
           ],
         ),
         child: Center(
@@ -665,8 +668,9 @@ class _RadarPageState extends State<RadarPage>
   }
 
   // 🟢 ฟังก์ชันสร้างการ์ดรายชื่อเพื่อน (รับ 3 พารามิเตอร์)
-  Widget _buildMemberCard(PeerEntity member, double? myLat, double? myLng) {
+  Widget _buildMemberCard(PeerEntity member, double? myLat, double? myLng ,double myHeading) {
     final imageBytes = ImageHelper.decodeBase64(member.imageBase64);
+    final isActive = member.isActive;
 
     // 🧮 ตัวแปรสำหรับคำนวณ
     String distanceText = 'Waiting for GPS...';
@@ -687,6 +691,8 @@ class _RadarPageState extends State<RadarPage>
         member.latitude!,
         member.longitude!,
       );
+      
+
 
       // จัด Format ให้ดูสวย (ถ้าเกิน 1000m ให้โชว์เป็น km)
       if (distanceInMeters >= 1000) {
@@ -694,6 +700,25 @@ class _RadarPageState extends State<RadarPage>
             '${(distanceInMeters / 1000).toStringAsFixed(1)} km away';
       } else {
         distanceText = '${distanceInMeters.toStringAsFixed(0)} m away';
+      }
+      if (!isActive) {
+        if (member.lastUpdatedAt != null) {
+          final minutesAgo = DateTime.now().difference(member.lastUpdatedAt!).inMinutes;
+          if (minutesAgo == 0) {
+            distanceText = 'Offline (Just now) - Last at ${(distanceInMeters).toStringAsFixed(0)}m';
+          } else {
+            distanceText = 'Offline ($minutesAgo min ago) - Last at ${(distanceInMeters).toStringAsFixed(0)}m';
+          }
+        } else {
+          distanceText = 'Offline';
+        }
+      } else {
+        // ทำงานปกติถ้ายังออนไลน์อยู่
+        if (distanceInMeters >= 1000) {
+          distanceText = '${(distanceInMeters / 1000).toStringAsFixed(1)} km away';
+        } else {
+          distanceText = '${distanceInMeters.toStringAsFixed(0)} m away';
+        }
       }
 
       // 2. คำนวณทิศทาง (องศา) แล้วแปลงเป็นเรเดียนสำหรับหมุนไอคอน
@@ -703,13 +728,16 @@ class _RadarPageState extends State<RadarPage>
         member.latitude!,
         member.longitude!,
       );
-      bearingAngle = bearingInDegrees * (math.pi / 180);
+      final relativeBearing = bearingInDegrees - myHeading;
+      bearingAngle = relativeBearing * (math.pi / 180);
+    }else if (!isActive) {
+       distanceText = 'Offline'; // กรณีหลุดตั้งแต่ยังไม่มี GPS
     }
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color:isActive? Colors.white: Colors.grey[100],
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey[200]!),
       ),
@@ -718,8 +746,8 @@ class _RadarPageState extends State<RadarPage>
           CircleAvatar(
             radius: 24,
             backgroundColor: member.isHost
-                ? Colors.green[100]
-                : Colors.blue[100],
+                ? Colors.green[300]
+                : (member.isHost ? Colors.green[100] : Colors.blue[100]),
             backgroundImage: imageBytes != null
                 ? MemoryImage(imageBytes)
                 : null,
@@ -747,10 +775,10 @@ class _RadarPageState extends State<RadarPage>
                   children: [
                     Text(
                       member.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: Colors.black87,
+                       color: isActive ? Colors.black87 : Colors.grey[600],
                       ),
                     ),
                     if (member.isHost) ...[
@@ -768,13 +796,13 @@ class _RadarPageState extends State<RadarPage>
                 Row(
                   children: [
                     Icon(
-                      canCalculate
-                          ? Icons.social_distance_rounded
-                          : Icons.location_off_rounded,
+                      !isActive 
+                          ? Icons.cloud_off_rounded // 🟢 เปลี่ยนไอคอนถ้าหลุด
+                          : (canCalculate ? Icons.social_distance_rounded : Icons.location_off_rounded),
                       size: 14,
-                      color: canCalculate
-                          ? Colors.green[600]
-                          : Colors.grey[500],
+                      color: !isActive 
+                          ? Colors.red[300] 
+                          : (canCalculate ? Colors.green[600] : Colors.grey[500]),
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -799,7 +827,9 @@ class _RadarPageState extends State<RadarPage>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: canCalculate ? Colors.green[50] : Colors.grey[100],
+             color: !isActive 
+                  ? Colors.grey[200] 
+                  : (canCalculate ? Colors.green[50] : Colors.grey[100]),
               shape: BoxShape.circle,
             ),
             child: Transform.rotate(

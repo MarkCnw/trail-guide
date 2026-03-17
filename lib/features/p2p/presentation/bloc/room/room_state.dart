@@ -240,3 +240,12 @@ class RoomTrackingUpdated extends RoomState {
 class RoomTripStarted extends RoomTrackingUpdated {
   const RoomTripStarted({required super.members});
 }
+
+class RoomMemberOfflineAlert extends RoomState {
+  final String memberName;
+  const RoomMemberOfflineAlert({required this.memberName});
+
+  @override
+  // ใส่ DateTime.now() เข้าไปเพื่อให้ State ถือว่าเป็นข้อมูลใหม่เสมอ (บังคับให้ UI เด้งทุกรอบ)
+  List<Object> get props => [memberName, DateTime.now()]; 
+}

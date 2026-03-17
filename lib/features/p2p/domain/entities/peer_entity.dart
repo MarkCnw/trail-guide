@@ -11,6 +11,8 @@ class PeerEntity extends Equatable {
   final bool isHost;
   final double? latitude;  // 🆕 เก็บละติจูด
   final double? longitude; // 🆕 เก็บจิจูด
+  final DateTime? lastUpdatedAt; 
+  final bool isActive;
 
   const PeerEntity({
     required this.id,
@@ -21,6 +23,8 @@ class PeerEntity extends Equatable {
     this.isHost = false,
     this.latitude,
     this.longitude,
+    this.lastUpdatedAt,
+    this.isActive = true,
   });
 
   PeerEntity copyWith({
@@ -32,6 +36,8 @@ class PeerEntity extends Equatable {
     bool? isHost,
     double? latitude,
     double? longitude,
+    DateTime? lastUpdatedAt,
+    bool? isActive,
   }) {
     return PeerEntity(
       id: id ?? this.id,
@@ -42,6 +48,8 @@ class PeerEntity extends Equatable {
       isHost: isHost ?? this.isHost,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
+      isActive: isActive ?? this.isActive,
     );
   }
 
