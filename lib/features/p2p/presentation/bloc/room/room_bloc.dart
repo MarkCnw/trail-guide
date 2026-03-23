@@ -54,9 +54,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   /// 🆕 All members list (สำหรับ Member เก็บไว้แสดงผล)
   final List<PeerEntity> _allMembersForMember = [];
 
-  RoomBloc({required P2PRepository repository})
-    : _repository = repository,
-      super(const RoomInitial()) {
+  RoomBloc({required P2PRepository repository}) : _repository = repository, super(const RoomInitial()) {
     // ลงทะเบียน Event Handlers
     on<CreateRoomEvent>(_onCreateRoom);
     on<CloseRoomEvent>(_onCloseRoom);
@@ -90,10 +88,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   // ============================================================
   // Keep-Alive System
   // ============================================================
-  void _onCheckMemberTimeout(
-    CheckMemberTimeoutEvent event,
-    Emitter<RoomState> emit,
-  ) {
+  void _onCheckMemberTimeout(CheckMemberTimeoutEvent event, Emitter<RoomState> emit) {
     if (state is RoomTripStarted || state is RoomTrackingUpdated) {
       // ดึงรายชื่อเพื่อนปัจจุบันออกมา
       final currentMembers = _getCurrentMembersFromState(state);
@@ -106,9 +101,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
 
         // ถ้ามีเวลาอัปเดตล่าสุด ให้คำนวณระยะห่าง
         if (member.lastUpdatedAt != null) {
-          final difference = now
-              .difference(member.lastUpdatedAt!)
-              .inSeconds;
+          final difference = now.difference(member.lastUpdatedAt!).inSeconds;
 
           // ถ้าเวลาผ่านไปเกิน timeout และสถานะยัง Active อยู่ -> จับเปลี่ยนเป็น Inactive
           if (difference > timeoutSeconds && member.isActive) {
@@ -133,9 +126,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
       _sendPing();
     });
 
-    _connectionCheckTimer = Timer.periodic(const Duration(seconds: 15), (
-      _,
-    ) {
+    _connectionCheckTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       _checkConnections();
     });
   }
@@ -150,18 +141,12 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
 
   Future<void> _sendPing() async {
     if (isHost) {
-      final pingMessage = RoomMessage.ping(
-        senderId: _deviceId,
-        senderName: _currentRoom?.hostName ?? 'Host',
-      );
+      final pingMessage = RoomMessage.ping(senderId: _deviceId, senderName: _currentRoom?.hostName ?? 'Host');
       for (final member in _connectedMembers) {
         await _repository.sendPayload(member.id, pingMessage.toJson());
       }
     } else if (isMember && _hostPeerId != null) {
-      final pingMessage = RoomMessage.ping(
-        senderId: _deviceId,
-        senderName: _memberName,
-      );
+      final pingMessage = RoomMessage.ping(senderId: _deviceId, senderName: _memberName);
       await _repository.sendPayload(_hostPeerId!, pingMessage.toJson());
     }
   }
@@ -195,10 +180,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   // HOST: สร้างห้อง
   // ============================================================
 
-  Future<void> _onCreateRoom(
-    CreateRoomEvent event,
-    Emitter<RoomState> emit,
-  ) async {
+  Future<void> _onCreateRoom(CreateRoomEvent event, Emitter<RoomState> emit) async {
     emit(const RoomLoading(message: 'Creating room...'));
 
     try {
@@ -207,18 +189,10 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
       _hostName = event.hostName;
       _hostImageBase64 = event.hostImageBase64;
 
-      _currentRoom = RoomEntity.create(
-        password: event.password,
-        hostId: _deviceId,
-        hostName: event.hostName,
-        maxMembers: event.maxMembers,
-      );
+      _currentRoom = RoomEntity.create(password: event.password, hostId: _deviceId, hostName: event.hostName, maxMembers: event.maxMembers);
 
       final advertisingName = '${event.hostName}#${_currentRoom!.roomPin}';
-      final result = await _repository.startAdvertising(
-        advertisingName,
-        'star',
-      );
+      final result = await _repository.startAdvertising(advertisingName, 'star');
 
       result.fold(
         (failure) {
@@ -231,14 +205,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
 
           _startKeepAlive();
 
-          emit(
-            RoomCreated(
-              room: _currentRoom!,
-              connectedMembers: const [],
-              hostName: _hostName,
-              hostImageBase64: _hostImageBase64,
-            ),
-          );
+          emit(RoomCreated(room: _currentRoom!, connectedMembers: const [], hostName: _hostName, hostImageBase64: _hostImageBase64));
         },
       );
     } catch (e) {
@@ -251,10 +218,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   // HOST: ปิดห้อง
   // ============================================================
 
-  Future<void> _onCloseRoom(
-    CloseRoomEvent event,
-    Emitter<RoomState> emit,
-  ) async {
+  Future<void> _onCloseRoom(CloseRoomEvent event, Emitter<RoomState> emit) async {
     if (!isHost || _currentRoom == null) {
       emit(const RoomError('You are not the host. '));
       return;
@@ -263,11 +227,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
     emit(const RoomLoading(message: 'Closing room...'));
 
     try {
-      final closeMessage = RoomMessage.roomClosed(
-        hostId: _deviceId,
-        hostName: _currentRoom!.hostName,
-        reason: event.reason,
-      );
+      final closeMessage = RoomMessage.roomClosed(hostId: _deviceId, hostName: _currentRoom!.hostName, reason: event.reason);
 
       await _broadcastToAllMembers(closeMessage);
       await Future.delayed(const Duration(milliseconds: 500));
@@ -293,13 +253,8 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   // MEMBER: ขอเข้าห้อง
   // ============================================================
 
-  Future<void> _onJoinRoom(
-    JoinRoomEvent event,
-    Emitter<RoomState> emit,
-  ) async {
-    emit(
-      RoomJoining(hostPeerId: event.hostPeerId, hostName: event.hostName),
-    );
+  Future<void> _onJoinRoom(JoinRoomEvent event, Emitter<RoomState> emit) async {
+    emit(RoomJoining(hostPeerId: event.hostPeerId, hostName: event.hostName));
 
     try {
       await _repository.stopDiscovery();
@@ -307,9 +262,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
       _memberName = event.memberName;
       _memberImageBase64 = event.memberImageBase64;
 
-      final connectResult = await _repository.connectToPeer(
-        event.hostPeerId,
-      );
+      final connectResult = await _repository.connectToPeer(event.hostPeerId);
 
       await connectResult.fold(
         (failure) async {
@@ -325,18 +278,11 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
             imageBase64: event.memberImageBase64,
           );
 
-          final sendResult = await _repository.sendPayload(
-            event.hostPeerId,
-            joinRequest.toJson(),
-          );
+          final sendResult = await _repository.sendPayload(event.hostPeerId, joinRequest.toJson());
 
           sendResult.fold(
             (failure) {
-              emit(
-                RoomError(
-                  'Failed to send join request: ${failure.message}',
-                ),
-              );
+              emit(RoomError('Failed to send join request: ${failure.message}'));
             },
             (_) {
               _hostPeerId = event.hostPeerId;
@@ -356,10 +302,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   // MEMBER: ออกจากห้อง
   // ============================================================
 
-  Future<void> _onLeaveRoom(
-    LeaveRoomEvent event,
-    Emitter<RoomState> emit,
-  ) async {
+  Future<void> _onLeaveRoom(LeaveRoomEvent event, Emitter<RoomState> emit) async {
     if (!isMember || _hostPeerId == null) {
       emit(const RoomError('You are not in a room.'));
       return;
@@ -368,10 +311,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
     emit(const RoomLoading(message: 'Leaving room...'));
 
     try {
-      final leaveMessage = RoomMessage.leaveRequest(
-        memberId: _deviceId,
-        memberName: _memberName,
-      );
+      final leaveMessage = RoomMessage.leaveRequest(memberId: _deviceId, memberName: _memberName);
 
       await _repository.sendPayload(_hostPeerId!, leaveMessage.toJson());
       await Future.delayed(const Duration(milliseconds: 300));
@@ -396,10 +336,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   // ============================================================
 
   // ✅ 1. เมื่อ Host กดปุ่ม Start Adventure
-  Future<void> _onStartTrip(
-    StartTripEvent event,
-    Emitter<RoomState> emit,
-  ) async {
+  Future<void> _onStartTrip(StartTripEvent event, Emitter<RoomState> emit) async {
     print("🚀 Host กำลังเริ่มทริป และส่งคำสั่งให้ทุกคน...");
     for (final member in _connectedMembers) {
       await _repository.sendPayload(member.id, "CMD:START_TRIP");
@@ -413,10 +350,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   }
 
   // ✅ 2. เมื่อ Member เปลี่ยน State หน้าจอ
-  void _onTripStartedByHost(
-    OnTripStartedByHostEvent event,
-    Emitter<RoomState> emit,
-  ) {
+  void _onTripStartedByHost(OnTripStartedByHostEvent event, Emitter<RoomState> emit) {
     _heartbeatTimer?.cancel();
     _heartbeatTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       add(const CheckMemberTimeoutEvent());
@@ -428,10 +362,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   // รับข้อความจาก Peer
   // ============================================================
 
-  Future<void> _onMessageReceived(
-    RoomMessageReceivedEvent event,
-    Emitter<RoomState> emit,
-  ) async {
+  Future<void> _onMessageReceived(RoomMessageReceivedEvent event, Emitter<RoomState> emit) async {
     final message = event.message;
     final fromPeerId = event.fromPeerId;
 
@@ -451,12 +382,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
         break;
 
       case RoomMessageType.ping:
-        final pongMessage = RoomMessage.pong(
-          senderId: _deviceId,
-          senderName: isHost
-              ? (_currentRoom?.hostName ?? 'Host')
-              : _memberName,
-        );
+        final pongMessage = RoomMessage.pong(senderId: _deviceId, senderName: isHost ? (_currentRoom?.hostName ?? 'Host') : _memberName);
         await _repository.sendPayload(fromPeerId, pongMessage.toJson());
         break;
 
@@ -496,11 +422,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   // HOST: Handle Join Request
   // ============================================================
 
-  Future<void> _handleJoinRequest(
-    String fromPeerId,
-    RoomMessage message,
-    Emitter<RoomState> emit,
-  ) async {
+  Future<void> _handleJoinRequest(String fromPeerId, RoomMessage message, Emitter<RoomState> emit) async {
     if (_currentRoom == null) return;
 
     final password = message.password;
@@ -533,27 +455,13 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
     // 3. สร้าง members list ก่อนเพิ่มคนใหม่ (ไม่รวมคนที่เพิ่งเข้ามา)
     final membersList = _connectedMembers
         .where((m) => m.id != fromPeerId)
-        .map(
-          (m) => {
-            'id': m.id,
-            'name': m.name,
-            'imageBase64': m.imageBase64,
-            'isHost': false,
-          },
-        )
+        .map((m) => {'id': m.id, 'name': m.name, 'imageBase64': m.imageBase64, 'isHost': false})
         .toList();
 
     // 4. เพิ่ม Member ใหม่
     final alreadyExists = _connectedMembers.any((m) => m.id == fromPeerId);
     if (!alreadyExists) {
-      final newMember = PeerEntity(
-        id: fromPeerId,
-        name: memberName,
-        rssi: 0,
-        isLost: false,
-        imageBase64: memberImageBase64,
-        isHost: false,
-      );
+      final newMember = PeerEntity(id: fromPeerId, name: memberName, rssi: 0, isLost: false, imageBase64: memberImageBase64, isHost: false);
       _connectedMembers.add(newMember);
       _lastPingTime[fromPeerId] = DateTime.now();
     }
@@ -582,31 +490,17 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
       maxMembers: _currentRoom!.maxMembers,
       newMemberImageBase64: memberImageBase64,
     );
-    await _broadcastToAllMembers(
-      joinedNotification,
-      excludePeerId: fromPeerId,
-    );
+    await _broadcastToAllMembers(joinedNotification, excludePeerId: fromPeerId);
 
     // 7. Update State
-    emit(
-      RoomCreated(
-        room: _currentRoom!,
-        connectedMembers: List.from(_connectedMembers),
-        hostName: _hostName,
-        hostImageBase64: _hostImageBase64,
-      ),
-    );
+    emit(RoomCreated(room: _currentRoom!, connectedMembers: List.from(_connectedMembers), hostName: _hostName, hostImageBase64: _hostImageBase64));
   }
 
   // ============================================================
   // HOST: Handle Leave Request
   // ============================================================
 
-  Future<void> _handleLeaveRequest(
-    String fromPeerId,
-    RoomMessage message,
-    Emitter<RoomState> emit,
-  ) async {
+  Future<void> _handleLeaveRequest(String fromPeerId, RoomMessage message, Emitter<RoomState> emit) async {
     if (_currentRoom == null) return;
 
     final memberName = message.senderName;
@@ -633,14 +527,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
       emit(RoomTrackingUpdated(members: List.from(_connectedMembers)));
     } else {
       // ถ้ายังไม่เริ่มทริป -> ให้อัปเดตหน้า Lobby ตามปกติ
-      emit(
-        RoomCreated(
-          room: _currentRoom!,
-          connectedMembers: List.from(_connectedMembers),
-          hostName: _hostName,
-          hostImageBase64: _hostImageBase64,
-        ),
-      );
+      emit(RoomCreated(room: _currentRoom!, connectedMembers: List.from(_connectedMembers), hostName: _hostName, hostImageBase64: _hostImageBase64));
     }
   }
   // ============================================================
@@ -651,10 +538,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   // MEMBER: Handle Join Response
   // ============================================================
 
-  Future<void> _handleJoinResponse(
-    RoomMessage message,
-    Emitter<RoomState> emit,
-  ) async {
+  Future<void> _handleJoinResponse(RoomMessage message, Emitter<RoomState> emit) async {
     if (message.isJoinAccepted) {
       _allMembersForMember.clear();
 
@@ -677,12 +561,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
           if (memberId != _deviceId && memberId.isNotEmpty) {
             _allMembersForMember.add(
               // 🔥 คุณเผลอลบบรรทัดนี้ไปในรอบก่อนครับ
-              PeerEntity(
-                id: memberId,
-                name: m['name'] as String? ?? '',
-                imageBase64: m['imageBase64'] as String?,
-                isHost: false,
-              ),
+              PeerEntity(id: memberId, name: m['name'] as String? ?? '', imageBase64: m['imageBase64'] as String?, isHost: false),
             );
           }
         }
@@ -690,14 +569,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
 
       // ❌ ไม่ต้องมีโค้ดแอดตัวเองตรงนี้แล้ว! (เราจะไม่เห็นตัวเองในการ์ดด้านล่าง)
       // แอดตัวเองกลับเข้าไป เพื่อให้หน้า Lobby ฝั่ง Member โชว์รูปตัวเอง
-      _allMembersForMember.add(
-        PeerEntity(
-          id: _deviceId,
-          name: _memberName,
-          imageBase64: _memberImageBase64,
-          isHost: false,
-        ),
-      );
+      _allMembersForMember.add(PeerEntity(id: _deviceId, name: _memberName, imageBase64: _memberImageBase64, isHost: false));
 
       emit(
         RoomJoined(
@@ -717,11 +589,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
       final status = message.joinResponseStatus;
       switch (status) {
         case JoinResponseStatus.rejectedWrongPassword:
-          emit(
-            RoomPasswordError(
-              message: message.message ?? 'Wrong password. ',
-            ),
-          );
+          emit(RoomPasswordError(message: message.message ?? 'Wrong password. '));
           break;
         case JoinResponseStatus.rejectedRoomFull:
           emit(RoomFullError(hostName: message.senderName));
@@ -738,29 +606,17 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   // MEMBER:  Handle Member Joined Notification
   // ============================================================
 
-  void _handleMemberJoinedNotification(
-    RoomMessage message,
-    Emitter<RoomState> emit,
-  ) {
+  void _handleMemberJoinedNotification(RoomMessage message, Emitter<RoomState> emit) {
     final currentState = state;
     if (currentState is RoomJoined) {
-      final newMember = PeerEntity(
-        id: message.memberId ?? '',
-        name: message.memberName ?? '',
-        imageBase64: message.imageBase64,
-        isHost: false,
-      );
+      final newMember = PeerEntity(id: message.memberId ?? '', name: message.memberName ?? '', imageBase64: message.imageBase64, isHost: false);
 
-      final alreadyExists = _allMembersForMember.any(
-        (m) => m.id == newMember.id,
-      );
+      final alreadyExists = _allMembersForMember.any((m) => m.id == newMember.id);
       if (!alreadyExists) {
         _allMembersForMember.add(newMember);
       }
 
-      emit(
-        currentState.copyWith(allMembers: List.from(_allMembersForMember)),
-      );
+      emit(currentState.copyWith(allMembers: List.from(_allMembersForMember)));
     }
   }
 
@@ -768,33 +624,19 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   // MEMBER: Handle Member Left Notification
   // ============================================================
 
-  void _handleMemberLeftNotification(
-    RoomMessage message,
-    Emitter<RoomState> emit,
-  ) async {
+  void _handleMemberLeftNotification(RoomMessage message, Emitter<RoomState> emit) async {
     final currentState = state;
-    final index = _allMembersForMember.indexWhere(
-      (m) => m.id == message.memberId,
-    );
+    final index = _allMembersForMember.indexWhere((m) => m.id == message.memberId);
     if (index != -1) {
       final disconnectedName = _allMembersForMember[index].name;
-      _allMembersForMember[index] = _allMembersForMember[index].copyWith(
-        isActive: false,
-      );
+      _allMembersForMember[index] = _allMembersForMember[index].copyWith(isActive: false);
 
-      emit(RoomMemberOfflineAlert(memberName: disconnectedName));
+      emit(RoomMemberLeft(memberName: disconnectedName));
       await Future.delayed(const Duration(milliseconds: 100));
-      if (currentState is RoomTripStarted ||
-          currentState is RoomTrackingUpdated) {
-        emit(
-          RoomTrackingUpdated(members: List.from(_allMembersForMember)),
-        );
+      if (currentState is RoomTripStarted || currentState is RoomTrackingUpdated) {
+        emit(RoomTrackingUpdated(members: List.from(_allMembersForMember)));
       } else if (currentState is RoomJoined) {
-        emit(
-          currentState.copyWith(
-            allMembers: List.from(_allMembersForMember),
-          ),
-        );
+        emit(currentState.copyWith(allMembers: List.from(_allMembersForMember)));
       }
     }
   }
@@ -803,10 +645,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   // MEMBER: Handle Room Closed
   // ============================================================
 
-  Future<void> _handleRoomClosed(
-    RoomMessage message,
-    Emitter<RoomState> emit,
-  ) async {
+  Future<void> _handleRoomClosed(RoomMessage message, Emitter<RoomState> emit) async {
     _stopKeepAlive();
 
     if (_hostPeerId != null) {
@@ -818,13 +657,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
     _currentRole = RoomRole.none;
     _allMembersForMember.clear();
 
-    emit(
-      RoomClosedByHost(
-        reason:
-            message.payload['reason'] as String? ??
-            'Host closed the room.',
-      ),
-    );
+    emit(RoomClosedByHost(reason: message.payload['reason'] as String? ?? 'Host closed the room.'));
   }
 
   // ============================================================
@@ -838,29 +671,18 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   // ============================================================
   // Internal Events (จัดการเมื่อสัญญาณหลุด)
   // ============================================================
-  Future<void> _onPeerDisconnected(
-    PeerDisconnectedEvent event,
-    Emitter<RoomState> emit,
-  ) async {
+  Future<void> _onPeerDisconnected(PeerDisconnectedEvent event, Emitter<RoomState> emit) async {
     _lastPingTime.remove(event.peerId);
 
     if (isHost) {
-      final index = _connectedMembers.indexWhere(
-        (m) => m.id == event.peerId,
-      );
-      final disconnectedMember = _connectedMembers
-          .where((m) => m.id == event.peerId)
-          .firstOrNull;
+      final index = _connectedMembers.indexWhere((m) => m.id == event.peerId);
+      final disconnectedMember = _connectedMembers.where((m) => m.id == event.peerId).firstOrNull;
       if (index != -1) {
         final disconnectedName = _connectedMembers[index].name;
-        _connectedMembers[index] = _connectedMembers[index].copyWith(
-          isActive: false,
-        );
+        _connectedMembers[index] = _connectedMembers[index].copyWith(isActive: false);
         if (disconnectedMember != null) {
-          _connectedMembers[index] = _connectedMembers[index].copyWith(
-            isActive: false,
-          );
-          emit(RoomMemberOfflineAlert(memberName: disconnectedName));
+          _connectedMembers[index] = _connectedMembers[index].copyWith(isActive: false);
+          emit(RoomMemberLeft(memberName: disconnectedName));
           await Future.delayed(const Duration(milliseconds: 100));
 
           if (_currentRoom != null) {
@@ -878,9 +700,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
           // 🔥 ไฮไลท์การแก้บัค: ป้องกันเรดาร์พังตอนเพื่อนสัญญาณหลุด
           if (state is RoomTripStarted || state is RoomTrackingUpdated) {
             // ถ้าเดินป่าอยู่ -> วาดเรดาร์ต่อ แค่เพื่อนหายไปจากจอ
-            emit(
-              RoomTrackingUpdated(members: List.from(_connectedMembers)),
-            );
+            emit(RoomTrackingUpdated(members: List.from(_connectedMembers)));
           } else {
             // ถ้ายังไม่เริ่มทริป -> อัปเดตรายชื่อใน Lobby
             if (_currentRoom != null) {
@@ -901,9 +721,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
             _hostPeerId = null;
             _currentRole = RoomRole.none;
             _allMembersForMember.clear();
-            emit(
-              const RoomClosedByHost(reason: 'Lost connection to host.'),
-            );
+            emit(const RoomClosedByHost(reason: 'Lost connection to host.'));
           }
         }
       }
@@ -913,10 +731,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
     // ============================================================
   }
 
-  Future<void> _onReset(
-    ResetRoomEvent event,
-    Emitter<RoomState> emit,
-  ) async {
+  Future<void> _onReset(ResetRoomEvent event, Emitter<RoomState> emit) async {
     _stopKeepAlive();
     await _repository.stopAll();
 
@@ -936,10 +751,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   // Helpers
   // ============================================================
 
-  Future<void> _broadcastToAllMembers(
-    RoomMessage message, {
-    String? excludePeerId,
-  }) async {
+  Future<void> _broadcastToAllMembers(RoomMessage message, {String? excludePeerId}) async {
     for (final member in _connectedMembers) {
       if (member.id != excludePeerId) {
         await _repository.sendPayload(member.id, message.toJson());
@@ -960,9 +772,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
 
       // 🆕 ดักจับพิกัด GPS ที่ลอยมาตามอากาศ!
       if (rawString.startsWith("LOC:")) {
-        final parts = rawString.split(
-          ',',
-        ); // แบ่งเป็น ['LOC:ID', 'Lat', 'Lng']
+        final parts = rawString.split(','); // แบ่งเป็น ['LOC:ID', 'Lat', 'Lng']
         if (parts.length == 3) {
           final senderIdStr = parts[0].substring(4); // ตัดคำว่า "LOC:" ออก
           final lat = double.tryParse(parts[1]);
@@ -979,13 +789,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
             }
 
             // โยนเข้า BLoC ให้อัปเดต UI
-            add(
-              UpdatePeerLocationEvent(
-                peerId: realPeerId,
-                latitude: lat,
-                longitude: lng,
-              ),
-            );
+            add(UpdatePeerLocationEvent(peerId: realPeerId, latitude: lat, longitude: lng));
           }
         }
         return; // ทำเสร็จก็จบเลย ไม่ต้องไปแปลง JSON
@@ -993,9 +797,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
 
       // ถ้าไม่ใช่คำสั่งพิเศษ แสดงว่าเป็น JSON ของ RoomMessage
       final message = RoomMessage.fromBytes(bytes.toList());
-      add(
-        RoomMessageReceivedEvent(fromPeerId: fromPeerId, message: message),
-      );
+      add(RoomMessageReceivedEvent(fromPeerId: fromPeerId, message: message));
     } catch (e) {
       print('RoomBloc: Failed to parse message: $e');
     }
@@ -1010,10 +812,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   // ============================================================
 
   // 1. ฟังก์ชันตัวช่วยส่งข้อความหาทุกคน (แบบ String ธรรมดา)
-  Future<void> _broadcastToAllMembersRaw(
-    String message, {
-    String? excludePeerId,
-  }) async {
+  Future<void> _broadcastToAllMembersRaw(String message, {String? excludePeerId}) async {
     for (final member in _connectedMembers) {
       if (member.id != excludePeerId) {
         await _repository.sendPayload(member.id, message);
@@ -1022,10 +821,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   }
 
   // 2. เมื่อ BLoC สั่งให้ส่งพิกัดตัวเอง
-  Future<void> _onSendMyLocation(
-    SendMyLocationEvent event,
-    Emitter<RoomState> emit,
-  ) async {
+  Future<void> _onSendMyLocation(SendMyLocationEvent event, Emitter<RoomState> emit) async {
     if (isHost) {
       // 🚀 แก้ไข: Host ใช้คำว่า "HOST" จ่าหน้าซอง เพื่อให้ Member ทุกคนรู้ทันที
       final locString = "LOC:HOST,${event.latitude},${event.longitude}";
@@ -1040,10 +836,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
   // 3. เมื่อได้รับพิกัดคนอื่น อัปเดตรายชื่อเพื่อน
 
   // 3. เมื่อได้รับพิกัดคนอื่น อัปเดตรายชื่อเพื่อน
-  Future<void> _onUpdatePeerLocation(
-    UpdatePeerLocationEvent event,
-    Emitter<RoomState> emit,
-  ) async {
+  Future<void> _onUpdatePeerLocation(UpdatePeerLocationEvent event, Emitter<RoomState> emit) async {
     final pId = event.peerId;
     final lat = event.latitude;
     final lng = event.longitude;
@@ -1066,41 +859,31 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
     } else if (isMember) {
       if (pId == "HOST") {
         // 🚀 ถ้าพิกัดมาจาก Host: ค้นหาจากสถานะ isHost ได้เลย ไม่ต้องสน ID ยาวๆ
-        final index = _allMembersForMember.indexWhere(
-          (m) => m.isHost == true,
-        );
+        final index = _allMembersForMember.indexWhere((m) => m.isHost == true);
         if (index != -1) {
-          _allMembersForMember[index] = _allMembersForMember[index]
-              .copyWith(
-                latitude: lat,
-                longitude: lng,
-                lastUpdatedAt: DateTime.now(),
-                isActive: true,
-              );
+          _allMembersForMember[index] = _allMembersForMember[index].copyWith(
+            latitude: lat,
+            longitude: lng,
+            lastUpdatedAt: DateTime.now(),
+            isActive: true,
+          );
         }
       } else {
         // อัปเดตพิกัดของ Member คนอื่น (ที่ Host กระจายต่อมาให้)
         final index = _allMembersForMember.indexWhere((m) => m.id == pId);
         if (index != -1) {
-          _allMembersForMember[index] = _allMembersForMember[index]
-              .copyWith(
-                latitude: lat,
-                longitude: lng,
-                lastUpdatedAt: DateTime.now(),
-                isActive: true,
-              );
+          _allMembersForMember[index] = _allMembersForMember[index].copyWith(
+            latitude: lat,
+            longitude: lng,
+            lastUpdatedAt: DateTime.now(),
+            isActive: true,
+          );
         }
       }
     }
 
     // 🔥 สั่ง BLoC อัปเดตพิกัดออกไปที่หน้าเรดาร์
-    emit(
-      RoomTrackingUpdated(
-        members: isHost
-            ? List.from(_connectedMembers)
-            : List.from(_allMembersForMember),
-      ),
-    );
+    emit(RoomTrackingUpdated(members: isHost ? List.from(_connectedMembers) : List.from(_allMembersForMember)));
   }
 
   @override

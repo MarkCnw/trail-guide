@@ -14,10 +14,7 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => sl<OnboardingCubit>()..loadUserProfile(),
-      child: const _ProfileView(),
-    );
+    return BlocProvider(create: (_) => sl<OnboardingCubit>()..loadUserProfile(), child: const _ProfileView());
   }
 }
 
@@ -31,7 +28,7 @@ class _ProfileView extends StatefulWidget {
 class _ProfileViewState extends State<_ProfileView> {
   // 🔑 Key สำหรับตรวจสอบ Form
   final _formKey = GlobalKey<FormState>();
-  
+
   bool _isEditing = false;
   String? _imagePath;
 
@@ -45,6 +42,13 @@ class _ProfileViewState extends State<_ProfileView> {
     _nameController = TextEditingController();
     _emergencyPhoneController = TextEditingController();
     _bloodTypeController = TextEditingController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final state = context.read<OnboardingCubit>().state;
+      if (state is OnboardingLoaded) {
+        _nameController.text = state.profile.nickname;
+        if (mounted) setState(() => _imagePath = state.profile.imagePath);
+      }
+    });
   }
 
   @override
@@ -63,10 +67,10 @@ class _ProfileViewState extends State<_ProfileView> {
   // 🛠️ Logic: เลือกรูปภาพ
   Future<void> _pickImage() async {
     if (!_isEditing) return;
-    
+
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    
+
     if (pickedFile != null) {
       setState(() => _imagePath = pickedFile.path);
     }
@@ -76,7 +80,6 @@ class _ProfileViewState extends State<_ProfileView> {
   void _saveProfile() {
     // 1. ตรวจสอบข้อมูลก่อนบันทึก (Validation)
     if (_formKey.currentState!.validate()) {
-      
       // 2. เรียก Cubit ให้ทำงาน
       context.read<OnboardingCubit>().completeSetup(
         _nameController.text,
@@ -85,9 +88,7 @@ class _ProfileViewState extends State<_ProfileView> {
       );
 
       // 3. แจ้งเตือนและกลับสู่โหมดดู
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully! ✅')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated successfully! ✅')));
       _toggleEditMode();
     }
   }
@@ -95,7 +96,7 @@ class _ProfileViewState extends State<_ProfileView> {
   @override
   Widget build(BuildContext context) {
     // 🎨 Theme Colors (ใช้ตัวแปรเพื่อให้แก้สีง่ายในอนาคต)
-    const primaryColor = Color(0xFF2E7D32); 
+    const primaryColor = Color(0xFF2E7D32);
     const backgroundColor = Color(0xFFF6F8F6);
 
     return Scaffold(
@@ -120,7 +121,7 @@ class _ProfileViewState extends State<_ProfileView> {
           if (state is OnboardingLoaded) {
             // อัปเดตข้อมูลเมื่อโหลดเสร็จ (เฉพาะตอนไม่ได้แก้ไขอยู่)
             if (!_isEditing) {
-              _nameController.text = state.profile.nickname;
+              _nameController.text != state.profile.nickname;
               _imagePath = state.profile.imagePath;
               // _emergencyPhoneController.text = state.profile.phone ?? '';
             }
@@ -130,6 +131,7 @@ class _ProfileViewState extends State<_ProfileView> {
           if (state is OnboardingLoading) {
             return const Center(child: CircularProgressIndicator());
           }
+          final profile = (state is OnboardingLoaded) ? state.profile : null;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -139,12 +141,12 @@ class _ProfileViewState extends State<_ProfileView> {
                 children: [
                   // 👤 1. ส่วนรูปโปรไฟล์ (แยก Widget)
                   _ProfileImageSelector(
-                    imagePath: _imagePath,
+                    imagePath: _isEditing ? _imagePath : profile?.imagePath,
                     isEditing: _isEditing,
                     onTap: _pickImage,
                     primaryColor: primaryColor,
                   ),
-                  
+
                   const SizedBox(height: 30),
 
                   // 📝 2. ฟอร์มข้อมูล (แยก Widget)
@@ -155,9 +157,7 @@ class _ProfileViewState extends State<_ProfileView> {
                     isEditing: _isEditing,
                     activeColor: primaryColor,
                     // ✅ Validation Logic
-                    validator: (value) => value == null || value.isEmpty 
-                        ? 'Please enter your nickname' 
-                        : null,
+                    validator: (value) => value == null || value.isEmpty ? 'Please enter your nickname' : null,
                   ),
                   const SizedBox(height: 16),
 
@@ -186,13 +186,10 @@ class _ProfileViewState extends State<_ProfileView> {
                   // 📊 3. ส่วนสถิติ (แยก Widget)
                   const Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Hiking Stats",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
+                    child: Text("Hiking Stats", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   Row(
                     children: const [
                       _StatCard(title: "Trips", value: "0", icon: Icons.map, color: primaryColor),
@@ -220,12 +217,7 @@ class _ProfileImageSelector extends StatelessWidget {
   final VoidCallback onTap;
   final Color primaryColor;
 
-  const _ProfileImageSelector({
-    required this.imagePath,
-    required this.isEditing,
-    required this.onTap,
-    required this.primaryColor,
-  });
+  const _ProfileImageSelector({required this.imagePath, required this.isEditing, required this.onTap, required this.primaryColor});
 
   @override
   Widget build(BuildContext context) {
@@ -238,9 +230,7 @@ class _ProfileImageSelector extends StatelessWidget {
               radius: 60,
               backgroundColor: Colors.grey[300],
               backgroundImage: imagePath != null ? FileImage(File(imagePath!)) : null,
-              child: imagePath == null
-                  ? const Icon(Icons.person, size: 60, color: Colors.grey)
-                  : null,
+              child: imagePath == null ? const Icon(Icons.person, size: 60, color: Colors.grey) : null,
             ),
           ),
           if (isEditing)
@@ -302,10 +292,7 @@ class _CustomTextField extends StatelessWidget {
         filled: true,
         fillColor: isEditing ? Colors.white : Colors.grey[200],
       ),
-      style: TextStyle(
-        color: isEditing ? Colors.black : Colors.black87,
-        fontWeight: isEditing ? FontWeight.normal : FontWeight.w500,
-      ),
+      style: TextStyle(color: isEditing ? Colors.black : Colors.black87, fontWeight: isEditing ? FontWeight.normal : FontWeight.w500),
     );
   }
 
@@ -323,12 +310,7 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final Color color;
 
-  const _StatCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
+  const _StatCard({required this.title, required this.value, required this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -338,13 +320,7 @@ class _StatCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
         ),
         child: Column(
           children: [
